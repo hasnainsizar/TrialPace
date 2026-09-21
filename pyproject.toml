@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "trialpace"
+version = "0.1.0"
+description = "Enrollment pace forecasts for structural heart device trials from ClinicalTrials.gov"
+requires-python = ">=3.11"
+dependencies = [
+    "requests>=2.31",
+    "pandas>=2.1",
+    "typer>=0.12",
+    "openpyxl>=3.1",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+trialpace = "trialpace.cli:app"
+
+[tool.setuptools.packages.find]
+include = ["trialpace*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

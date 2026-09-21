@@ -1,0 +1,116 @@
+# All tunable settings for trialpace. Nothing here is hardcoded in the package.
+
+api:
+  base_url: https://clinicaltrials.gov/api/v2/studies
+  page_size: 200
+  timeout_seconds: 60
+  max_retries: 5
+  backoff_seconds: 2.0
+  # Field names in the ClinicalTrials.gov v2 "fields" parameter.
+  fields:
+    - NCTId
+    - BriefTitle
+    - LeadSponsorName
+    - OverallStatus
+    - Phase
+    - Condition
+    - InterventionName
+    - EnrollmentCount
+    - EnrollmentType
+    - StartDate
+    - PrimaryCompletionDate
+    - PrimaryCompletionDateType
+    - CompletionDate
+    - LastUpdatePostDate
+    - LocationFacility
+    - LocationCity
+    - LocationState
+    - LocationCountry
+    - LocationStatus
+
+search:
+  conditions:
+    - aortic stenosis
+    - aortic regurgitation
+    - mitral regurgitation
+    - tricuspid regurgitation
+  terms:
+    - TAVR
+    - TAVI
+    - transcatheter aortic valve
+    - transcatheter mitral
+    - transcatheter tricuspid
+  study_type: INTERVENTIONAL
+  start_date_min: "2010-01-01"
+
+sponsors:
+  default: Other
+  # Case-insensitive substring match against the lead sponsor name.
+  # First match wins, in the order listed.
+  mapping:
+    Edwards Lifesciences:
+      - edwards
+    Medtronic:
+      - medtronic
+    Boston Scientific:
+      - boston scientific
+    Abbott:
+      - abbott
+      - st. jude
+      - st jude
+
+valve_types:
+  default: other
+  # Keywords matched against conditions, interventions, and title (lowercased).
+  # Order matters: the first valve type with a hit wins.
+  keywords:
+    tricuspid:
+      - tricuspid
+    mitral:
+      - mitral
+    aortic:
+      - aortic
+      - tavr
+      - tavi
+
+forecast:
+  active_statuses:
+    - RECRUITING
+    - ACTIVE_NOT_RECRUITING
+  benchmark_statuses:
+    - COMPLETED
+  # Segments with fewer benchmark trials than this fall back to the overall rate.
+  min_segment_count: 5
+  # Benchmark trials shorter than this are excluded as implausible.
+  min_months: 3.0
+  # Active trials whose median forecast runs past this many months from start
+  # are excluded. Almost always a large target with an incomplete site list.
+  max_horizon_months: 240
+  days_per_month: 30.4375
+  size_bands:
+    - name: small
+      max_enrollment: 100
+    - name: medium
+      max_enrollment: 500
+    - name: large
+      max_enrollment: null
+  # Gap = median forecast date minus posted primary completion date, in days.
+  status_thresholds:
+    on_track_max_days: 90
+    at_risk_max_days: 365
+  labels:
+    on_track: On track
+    at_risk: At risk
+    likely_late: Likely late
+    no_posted_date: No posted date
+
+backtest:
+  holdout_fraction: 0.2
+  random_seed: 42
+
+paths:
+  raw_dir: data/raw
+  db_path: data/trialpace.db
+  powerbi_dir: data/powerbi
+  excel_path: data/excel/trialpace_export.xlsx
+  method_path: METHOD.md
