@@ -17,8 +17,8 @@ def test_same_day_load_replaces_instead_of_duplicating(tmp_path: Path, config: d
     assert first == second
     trials = db.read_table(conn, "trials", day)
     sites = db.read_table(conn, "sites", day)
-    assert len(trials) == 3
-    assert len(sites) == 8
+    assert len(trials) == 5
+    assert len(sites) == 10
     assert conn.execute("SELECT COUNT(*) FROM snapshots").fetchone()[0] == 1
 
 
@@ -27,5 +27,5 @@ def test_different_days_are_kept_separately(tmp_path: Path, config: dict[str, An
     conn = db.connect(tmp_path / "test.db")
     db.replace_snapshot(conn, date(2026, 1, 15), records)
     db.replace_snapshot(conn, date(2026, 1, 16), records)
-    assert len(db.read_table(conn, "trials")) == 6
+    assert len(db.read_table(conn, "trials")) == 10
     assert db.latest_snapshot(conn) == date(2026, 1, 16)

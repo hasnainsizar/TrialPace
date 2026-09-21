@@ -51,6 +51,7 @@ def test_build_benchmarks_excludes_zero_sites_and_zero_months(config: dict) -> N
         [
             _trial("NCT1"),
             _trial("NCT2", site_count=0),
+            _trial("NCT6", site_count=4),
             _trial("NCT3", primary_completion_date=pd.Timestamp("2015-01-01")),
             _trial("NCT4", enrollment_type="ESTIMATED"),
             _trial("NCT5", overall_status="RECRUITING"),
@@ -61,6 +62,7 @@ def test_build_benchmarks_excludes_zero_sites_and_zero_months(config: dict) -> N
     assert benchmarks.iloc[0]["rate_per_site_month"] == pytest.approx(240 / 5 / (731 / 30.4375))
     reasons = dict(zip(exclusions["nct_id"], exclusions["reason"]))
     assert reasons["NCT2"] == "no sites listed"
+    assert reasons["NCT6"] == "fewer than 5 sites listed"
     assert "months" in reasons["NCT3"]
     assert "ACTUAL" in reasons["NCT4"]
     assert "NCT5" not in reasons

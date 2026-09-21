@@ -2,62 +2,324 @@
   "studies": [
     {
       "protocolSection": {
-        "identificationModule": {"nctId": "NCT00000001", "briefTitle": "SAPIEN Valve in Severe Aortic Stenosis"},
+        "identificationModule": {
+          "nctId": "NCT00000001",
+          "briefTitle": "SAPIEN Valve in Severe Aortic Stenosis"
+        },
         "statusModule": {
           "overallStatus": "COMPLETED",
-          "startDateStruct": {"date": "2015-01"},
-          "primaryCompletionDateStruct": {"date": "2017-01", "type": "ACTUAL"},
-          "completionDateStruct": {"date": "2018-06"},
-          "lastUpdatePostDateStruct": {"date": "2021-04-08"}
+          "startDateStruct": {
+            "date": "2015-01"
+          },
+          "primaryCompletionDateStruct": {
+            "date": "2017-01",
+            "type": "ACTUAL"
+          },
+          "completionDateStruct": {
+            "date": "2018-06"
+          },
+          "lastUpdatePostDateStruct": {
+            "date": "2021-04-08"
+          }
         },
-        "sponsorCollaboratorsModule": {"leadSponsor": {"name": "Edwards Lifesciences"}},
-        "conditionsModule": {"conditions": ["Aortic Stenosis"]},
-        "designModule": {"phases": ["NA"], "enrollmentInfo": {"count": 240, "type": "ACTUAL"}},
-        "armsInterventionsModule": {"interventions": [{"name": "SAPIEN 3 valve"}]},
-        "contactsLocationsModule": {"locations": [
-          {"facility": "Hospital A", "city": "Denver", "state": "Colorado", "country": "United States"},
-          {"facility": "Hospital B", "city": "Boston", "state": "Massachusetts", "country": "United States"},
-          {"facility": "Hospital C", "city": "Toronto", "state": "Ontario", "country": "Canada"},
-          {"facility": "Hospital D", "city": "Paris", "country": "France"},
-          {"facility": "Hospital E", "city": "Berlin", "country": "Germany"}
-        ]}
+        "sponsorCollaboratorsModule": {
+          "leadSponsor": {
+            "name": "Edwards Lifesciences",
+            "class": "INDUSTRY"
+          }
+        },
+        "conditionsModule": {
+          "conditions": [
+            "Aortic Stenosis"
+          ]
+        },
+        "designModule": {
+          "phases": [
+            "NA"
+          ],
+          "enrollmentInfo": {
+            "count": 240,
+            "type": "ACTUAL"
+          }
+        },
+        "armsInterventionsModule": {
+          "interventions": [
+            {
+              "name": "SAPIEN 3 valve",
+              "type": "DEVICE"
+            }
+          ]
+        },
+        "contactsLocationsModule": {
+          "locations": [
+            {
+              "facility": "Hospital A",
+              "city": "Denver",
+              "state": "Colorado",
+              "country": "United States"
+            },
+            {
+              "facility": "Hospital B",
+              "city": "Boston",
+              "state": "Massachusetts",
+              "country": "United States"
+            },
+            {
+              "facility": "Hospital C",
+              "city": "Toronto",
+              "state": "Ontario",
+              "country": "Canada"
+            },
+            {
+              "facility": "Hospital D",
+              "city": "Paris",
+              "country": "France"
+            },
+            {
+              "facility": "Hospital E",
+              "city": "Berlin",
+              "country": "Germany"
+            }
+          ]
+        }
       }
     },
     {
       "protocolSection": {
-        "identificationModule": {"nctId": "NCT00000002", "briefTitle": "Transcatheter Mitral Repair Registry Trial"},
+        "identificationModule": {
+          "nctId": "NCT00000002",
+          "briefTitle": "Transcatheter Mitral Repair Registry Trial"
+        },
         "statusModule": {
           "overallStatus": "RECRUITING",
-          "startDateStruct": {"date": "2024-03-15"},
-          "primaryCompletionDateStruct": {"date": "2026-12", "type": "ESTIMATED"},
-          "completionDateStruct": {"date": "2028-12"},
-          "lastUpdatePostDateStruct": {"date": "2025-08-01"}
+          "startDateStruct": {
+            "date": "2024-03-15"
+          },
+          "primaryCompletionDateStruct": {
+            "date": "2026-12",
+            "type": "ESTIMATED"
+          },
+          "completionDateStruct": {
+            "date": "2028-12"
+          },
+          "lastUpdatePostDateStruct": {
+            "date": "2025-08-01"
+          }
         },
-        "sponsorCollaboratorsModule": {"leadSponsor": {"name": "Abbott Medical Devices"}},
-        "conditionsModule": {"conditions": ["Mitral Regurgitation"]},
-        "designModule": {"phases": ["NA"], "enrollmentInfo": {"count": 100, "type": "ESTIMATED"}},
-        "armsInterventionsModule": {"interventions": [{"name": "MitraClip"}]},
-        "contactsLocationsModule": {"locations": [
-          {"facility": "Clinic X", "city": "Chicago", "state": "Illinois", "country": "United States", "status": "RECRUITING"},
-          {"facility": "Clinic Y", "city": "Houston", "state": "Texas", "country": "United States", "status": "RECRUITING"}
-        ]}
+        "sponsorCollaboratorsModule": {
+          "leadSponsor": {
+            "name": "Abbott Medical Devices",
+            "class": "INDUSTRY"
+          }
+        },
+        "conditionsModule": {
+          "conditions": [
+            "Mitral Regurgitation"
+          ]
+        },
+        "designModule": {
+          "phases": [
+            "NA"
+          ],
+          "enrollmentInfo": {
+            "count": 100,
+            "type": "ESTIMATED"
+          }
+        },
+        "armsInterventionsModule": {
+          "interventions": [
+            {
+              "name": "MitraClip",
+              "type": "DEVICE"
+            }
+          ]
+        },
+        "contactsLocationsModule": {
+          "locations": [
+            {
+              "facility": "Clinic X",
+              "city": "Chicago",
+              "state": "Illinois",
+              "country": "United States",
+              "status": "RECRUITING"
+            },
+            {
+              "facility": "Clinic Y",
+              "city": "Houston",
+              "state": "Texas",
+              "country": "United States",
+              "status": "RECRUITING"
+            }
+          ]
+        }
       }
     },
     {
       "protocolSection": {
-        "identificationModule": {"nctId": "NCT00000003"},
-        "statusModule": {"overallStatus": "RECRUITING"},
-        "sponsorCollaboratorsModule": {"leadSponsor": {"name": "University Hospital Somewhere"}},
-        "conditionsModule": {"conditions": ["Tricuspid Regurgitation"]},
-        "designModule": {"phases": ["NA"]},
-        "armsInterventionsModule": {"interventions": []},
-        "contactsLocationsModule": {"locations": [{"city": "Nowhere"}]}
+        "identificationModule": {
+          "nctId": "NCT00000003"
+        },
+        "statusModule": {
+          "overallStatus": "RECRUITING"
+        },
+        "sponsorCollaboratorsModule": {
+          "leadSponsor": {
+            "name": "University Hospital Somewhere",
+            "class": "OTHER"
+          }
+        },
+        "conditionsModule": {
+          "conditions": [
+            "Tricuspid Regurgitation"
+          ]
+        },
+        "designModule": {
+          "phases": [
+            "NA"
+          ]
+        },
+        "armsInterventionsModule": {
+          "interventions": []
+        },
+        "contactsLocationsModule": {
+          "locations": [
+            {
+              "city": "Nowhere"
+            }
+          ]
+        }
       }
     },
     {
       "protocolSection": {
-        "identificationModule": {"briefTitle": "Study with no NCT ID"},
-        "statusModule": {"overallStatus": "COMPLETED"}
+        "identificationModule": {
+          "briefTitle": "Study with no NCT ID"
+        },
+        "statusModule": {
+          "overallStatus": "COMPLETED"
+        }
+      }
+    },
+    {
+      "protocolSection": {
+        "identificationModule": {
+          "nctId": "NCT00000004",
+          "briefTitle": "Sutureless Surgical Valve in Aortic Stenosis"
+        },
+        "statusModule": {
+          "overallStatus": "RECRUITING",
+          "startDateStruct": {
+            "date": "2023-01"
+          },
+          "primaryCompletionDateStruct": {
+            "date": "2025-01",
+            "type": "ESTIMATED"
+          },
+          "completionDateStruct": {
+            "date": "2025-06"
+          },
+          "lastUpdatePostDateStruct": {
+            "date": "2024-01-01"
+          }
+        },
+        "sponsorCollaboratorsModule": {
+          "leadSponsor": {
+            "name": "Valve Maker Inc",
+            "class": "INDUSTRY"
+          }
+        },
+        "conditionsModule": {
+          "conditions": [
+            "Aortic Stenosis"
+          ]
+        },
+        "designModule": {
+          "phases": [
+            "PHASE3"
+          ],
+          "enrollmentInfo": {
+            "count": 300,
+            "type": "ESTIMATED"
+          }
+        },
+        "armsInterventionsModule": {
+          "interventions": [
+            {
+              "name": "Sutureless bioprosthesis",
+              "type": "DEVICE"
+            }
+          ]
+        },
+        "contactsLocationsModule": {
+          "locations": [
+            {
+              "facility": "Site 1",
+              "city": "Rome",
+              "country": "Italy"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "protocolSection": {
+        "identificationModule": {
+          "nctId": "NCT00000005",
+          "briefTitle": "Evolut Valve in Low Risk Patients"
+        },
+        "statusModule": {
+          "overallStatus": "COMPLETED",
+          "startDateStruct": {
+            "date": "2016-03"
+          },
+          "primaryCompletionDateStruct": {
+            "date": "2019-03",
+            "type": "ACTUAL"
+          },
+          "completionDateStruct": {
+            "date": "2020-03"
+          },
+          "lastUpdatePostDateStruct": {
+            "date": "2021-01-01"
+          }
+        },
+        "sponsorCollaboratorsModule": {
+          "leadSponsor": {
+            "name": "University of Somewhere",
+            "class": "OTHER"
+          }
+        },
+        "conditionsModule": {
+          "conditions": [
+            "Aortic Stenosis"
+          ]
+        },
+        "designModule": {
+          "phases": [
+            "NA"
+          ],
+          "enrollmentInfo": {
+            "count": 150,
+            "type": "ACTUAL"
+          }
+        },
+        "armsInterventionsModule": {
+          "interventions": [
+            {
+              "name": "Evolut R",
+              "type": "DEVICE"
+            }
+          ]
+        },
+        "contactsLocationsModule": {
+          "locations": [
+            {
+              "facility": "Site 1",
+              "city": "Rome",
+              "country": "Italy"
+            }
+          ]
+        }
       }
     }
   ]

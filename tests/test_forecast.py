@@ -15,6 +15,13 @@ from trialpace.forecast import (
     lookup_rate,
     segment_rates,
 )
+from trialpace.predictors import RatePredictor
+
+
+def _rate_predictor(config: dict) -> RatePredictor:
+    predictor = RatePredictor(config["forecast"])
+    predictor.rates = {OVERALL_KEY: RateQuantiles(p25=0.5, p50=1.0, p75=2.0, n=10, source="overall")}
+    return predictor
 
 
 def test_forecast_months_orders_fast_to_slow() -> None:
@@ -55,7 +62,6 @@ def test_label_status_thresholds(gap: int | None, expected: str, config: dict) -
 
 
 def test_build_forecasts_produces_range_and_label(config: dict) -> None:
-    rates = {OVERALL_KEY: RateQuantiles(p25=0.5, p50=1.0, p75=2.0, n=10, source="overall")}
     trials = pd.DataFrame(
         [
             {
@@ -70,9 +76,11 @@ def test_build_forecasts_produces_range_and_label(config: dict) -> None:
             },
         ]
     )
-    forecasts, exclusions = build_forecasts(trials, rates, config["forecast"])
+    forecasts, exclusions = build_forecasts(trials, _rate_predictor(config), config["forecast"])
     assert len(forecasts) == 1
     row = forecasts.iloc[0]
+    assert row["model"] == "rate"
+    assert row["basis"] == "rate:overall"
     assert row["date_p25"] < row["date_median"] < row["date_p75"]
     assert row["months_median"] == pytest.approx(20.0)
     assert row["gap_days"] == (row["date_median"] - pd.Timestamp("2025-01-01")).days
@@ -81,7 +89,6 @@ def test_build_forecasts_produces_range_and_label(config: dict) -> None:
 
 
 def test_build_forecasts_excludes_trials_beyond_horizon(config: dict) -> None:
-    rates = {OVERALL_KEY: RateQuantiles(p25=0.5, p50=1.0, p75=2.0, n=10, source="overall")}
     trials = pd.DataFrame(
         [
             {
@@ -91,6 +98,6 @@ def test_build_forecasts_excludes_trials_beyond_horizon(config: dict) -> None:
             }
         ]
     )
-    forecasts, exclusions = build_forecasts(trials, rates, config["forecast"])
+    forecasts, exclusions = build_forecasts(trials, _rate_predictor(config), config["forecast"])
     assert forecasts.empty
     assert "horizon" in exclusions.iloc[0]["reason"]
