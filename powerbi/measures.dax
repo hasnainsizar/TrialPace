@@ -1,0 +1,109 @@
+// trialpace measures for Power BI Desktop.
+// Create each one on the table named in the comment above it.
+// Calculated columns are marked as such and go on the table named.
+
+// ---------- fact_forecast ----------
+
+// Measure
+Active Trials =
+COUNTROWS ( fact_forecast )
+
+// Measure
+Total Target Enrollment =
+SUM ( fact_forecast[target_enrollment] )
+
+// Measure
+Trials Likely Late =
+CALCULATE ( COUNTROWS ( fact_forecast ), fact_forecast[status_label] = "Likely late" )
+
+// Measure
+Trials At Risk =
+CALCULATE ( COUNTROWS ( fact_forecast ), fact_forecast[status_label] = "At risk" )
+
+// Measure
+Trials On Track =
+CALCULATE ( COUNTROWS ( fact_forecast ), fact_forecast[status_label] = "On track" )
+
+// Measure
+Share Likely Late =
+DIVIDE ( [Trials Likely Late], [Active Trials] )
+
+// Measure. Positive means the median forecast lands after the posted date.
+Median Gap Days =
+MEDIAN ( fact_forecast[gap_days] )
+
+// Measure
+Median Months To Target =
+MEDIAN ( fact_forecast[months_median] )
+
+// Calculated column. Posted primary completion date expressed as months from start,
+// so it can sit on the same axis as the forecast months.
+Posted Months From Start =
+IF (
+    ISBLANK ( fact_forecast[posted_primary_completion_date] ),
+    BLANK (),
+    DATEDIFF ( fact_forecast[start_date], fact_forecast[posted_primary_completion_date], DAY ) / 30.4375
+)
+
+// Measures used as error bar bounds on the forecast chart
+Forecast Months P25 =
+MIN ( fact_forecast[months_p25] )
+
+Forecast Months Median =
+MIN ( fact_forecast[months_median] )
+
+Forecast Months P75 =
+MIN ( fact_forecast[months_p75] )
+
+Posted Months =
+MIN ( fact_forecast[Posted Months From Start] )
+
+// ---------- fact_site ----------
+
+// Measure. Counts sites in the most recent snapshot only, so history rows
+// in fact_site do not inflate the total.
+Total Sites =
+VAR LatestSnapshot =
+    CALCULATE ( MAX ( fact_site[snapshot_date] ), ALL ( fact_site ) )
+RETURN
+    CALCULATE ( COUNTROWS ( fact_site ), fact_site[snapshot_date] = LatestSnapshot )
+
+// Measure. Sites in whichever snapshot is on the axis or slicer.
+Sites In Snapshot =
+COUNTROWS ( fact_site )
+
+// Measure
+Countries =
+DISTINCTCOUNT ( fact_site[country] )
+
+// ---------- fact_benchmark ----------
+
+// Measure
+Benchmark Trials =
+COUNTROWS ( fact_benchmark )
+
+// Measure. Patients per site per month.
+Median Rate Per Site Per Month =
+MEDIAN ( fact_benchmark[rate_per_site_month] )
+
+// Measure
+Rate P25 =
+PERCENTILE.INC ( fact_benchmark[rate_per_site_month], 0.25 )
+
+// Measure
+Rate P75 =
+PERCENTILE.INC ( fact_benchmark[rate_per_site_month], 0.75 )
+
+// ---------- dim_trial ----------
+
+// Measure
+Trials In Snapshot =
+COUNTROWS ( dim_trial )
+
+// Measure
+Edwards Trials =
+CALCULATE ( COUNTROWS ( dim_trial ), dim_sponsor[is_edwards] = 1 )
+
+// Measure
+Competitor Trials =
+CALCULATE ( COUNTROWS ( dim_trial ), dim_sponsor[is_edwards] = 0, dim_sponsor[sponsor] <> "Other" )
