@@ -1,0 +1,137 @@
+from __future__ import annotations
+
+import sqlite3
+from datetime import date
+from pathlib import Path
+from typing import Any
+
+import pandas as pd
+from openpyxl import Workbook
+from openpyxl.formatting.rule import CellIsRule
+from openpyxl.styles import Font, PatternFill
+from openpyxl.utils import get_column_letter
+from openpyxl.worksheet.worksheet import Worksheet
+
+from trialpace.db import read_table
+
+HEADER_FONT = Font(bold=True)
+STATUS_FILLS = {
+    "on_track": "C6EFCE",
+    "at_risk": "FFEB9C",
+    "likely_late": "FFC7CE",
+    "no_posted_date": "D9D9D9",
+}
+DATE_FORMAT = "yyyy-mm-dd"
+
+
+def _write_frame(ws: Worksheet, frame: pd.DataFrame, empty_message: str) -> None:
+    ws.append(list(frame.columns))
+    for cell in ws[1]:
+        cell.font = HEADER_FONT
+    if frame.empty:
+        ws.append([empty_message])
+        ws.freeze_panes = "A2"
+        return
+    date_columns = [c for c in frame.columns if pd.api.types.is_datetime64_any_dtype(frame[c])]
+    for row in frame.itertuples(index=False):
+        values = [None if pd.isna(v) else (v.to_pydatetime().date() if isinstance(v, pd.Timestamp) else v) for v in row]
+        ws.append(values)
+    for column in date_columns:
+        letter = get_column_letter(list(frame.columns).index(column) + 1)
+        for cell in ws[letter][1:]:
+            cell.number_format = DATE_FORMAT
+    ws.freeze_panes = "A2"
+    ws.auto_filter.ref = ws.dimensions
+    for index, column in enumerate(frame.columns, start=1):
+        sample = frame[column].astype(str).str.len().quantile(0.9) if len(frame) else 0
+        width = min(max(len(str(column)), int(sample)) + 2, 60)
+        ws.column_dimensions[get_column_letter(index)].width = max(width, 8)
+
+
+def _status_fill(ws: Worksheet, frame: pd.DataFrame, labels: dict[str, str]) -> None:
+    if frame.empty or "status_label" not in frame.columns:
+        return
+    letter = get_column_letter(list(frame.columns).index("status_label") + 1)
+    cell_range = f"{letter}2:{letter}{len(frame) + 1}"
+    for key, color in STATUS_FILLS.items():
+        label = labels.get(key)
+        if label:
+            fill = PatternFill(start_color=color, end_color=color, fill_type="solid")
+            ws.conditional_formatting.add(cell_range, CellIsRule(operator="equal", formula=[f'"{label}"'], fill=fill))
+
+
+def summary_frame(trials: pd.DataFrame, forecasts: pd.DataFrame, benchmarks: pd.DataFrame, metrics: pd.DataFrame, snapshot: date) -> pd.DataFrame:
+    rows: list[tuple[str, Any]] = [("Snapshot date", snapshot.isoformat()), ("Trials in snapshot", len(trials))]
+    if not trials.empty:
+        for sponsor, count in trials["sponsor"].value_counts().items():
+            rows.append((f"Trials: {sponsor}", int(count)))
+    rows.append(("Active trials with a forecast", len(forecasts)))
+    if not forecasts.empty:
+        for label, count in forecasts["status_label"].value_counts().items():
+            rows.append((f"Forecast status: {label}", int(count)))
+    rows.append(("Benchmark trials", len(benchmarks)))
+    if not benchmarks.empty:
+        rows.append(("Median rate per site per month", round(float(benchmarks["rate_per_site_month"].median()), 3)))
+    for row in metrics.itertuples(index=False):
+        rows.append((f"Backtest: {row.metric}", None if pd.isna(row.value) else round(float(row.value), 2)))
+    return pd.DataFrame(rows, columns=["Metric", "Value"])
+
+
+def export_excel(conn: sqlite3.Connection, snapshot: date, config: dict[str, Any], out_path: Path, method_text: str) -> dict[str, int]:
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    trials = read_table(conn, "trials", snapshot)
+    forecasts = read_table(conn, "forecasts", snapshot)
+    sites = read_table(conn, "sites", snapshot)
+    benchmarks = read_table(conn, "benchmarks", snapshot)
+    segment = read_table(conn, "segment_rates", snapshot)
+    quality = read_table(conn, "data_quality", snapshot)
+    metrics = read_table(conn, "backtest_results", snapshot)
+    labels: dict[str, str] = config["forecast"]["labels"]
+
+    if not sites.empty and not trials.empty:
+        sites = sites.merge(trials[["nct_id", "sponsor", "overall_status", "valve_type"]], on="nct_id", how="left")
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Summary"
+    _write_frame(ws, summary_frame(trials, forecasts, benchmarks, metrics, snapshot), "No data loaded")
+
+    ws = wb.create_sheet("Active Trials Forecast")
+    forecast_view = forecasts.drop(columns=["snapshot_date"], errors="ignore")
+    _write_frame(ws, forecast_view, "No active trials could be forecast for this snapshot")
+    _status_fill(ws, forecast_view, labels)
+
+    ws = wb.create_sheet("Sites")
+    _write_frame(ws, sites.drop(columns=["snapshot_date"], errors="ignore"), "No sites in this snapshot")
+
+    ws = wb.create_sheet("Benchmark Rates")
+    _write_frame(ws, segment.drop(columns=["snapshot_date"], errors="ignore"), "No benchmark trials met the criteria")
+    if not benchmarks.empty:
+        ws.append([])
+        start_row = ws.max_row + 1
+        detail = benchmarks.drop(columns=["snapshot_date"], errors="ignore")
+        ws.append(list(detail.columns))
+        for cell in ws[start_row]:
+            cell.font = HEADER_FONT
+        for row in detail.itertuples(index=False):
+            ws.append([None if pd.isna(v) else (v.to_pydatetime().date() if isinstance(v, pd.Timestamp) else v) for v in row])
+        for column in ("start_date", "primary_completion_date"):
+            letter = get_column_letter(list(detail.columns).index(column) + 1)
+            for cell in ws[letter][start_row:]:
+                cell.number_format = DATE_FORMAT
+
+    ws = wb.create_sheet("Data Quality")
+    _write_frame(ws, quality.drop(columns=["snapshot_date"], errors="ignore"), "No missing or unparseable fields found")
+
+    ws = wb.create_sheet("Method Notes")
+    ws.column_dimensions["A"].width = 120
+    for line in method_text.splitlines():
+        ws.append([line])
+
+    wb.save(out_path)
+    return {
+        "Active Trials Forecast": len(forecasts),
+        "Sites": len(sites),
+        "Benchmark Rates": len(segment),
+        "Data Quality": len(quality),
+    }
