@@ -60,20 +60,36 @@ def _status_fill(ws: Worksheet, frame: pd.DataFrame, labels: dict[str, str]) -> 
             ws.conditional_formatting.add(cell_range, CellIsRule(operator="equal", formula=[f'"{label}"'], fill=fill))
 
 
-def summary_frame(trials: pd.DataFrame, forecasts: pd.DataFrame, benchmarks: pd.DataFrame, metrics: pd.DataFrame, snapshot: date) -> pd.DataFrame:
-    rows: list[tuple[str, Any]] = [("Snapshot date", snapshot.isoformat()), ("Trials in snapshot", len(trials))]
+def summary_frame(
+    trials: pd.DataFrame,
+    forecasts: pd.DataFrame,
+    benchmarks: pd.DataFrame,
+    comparison: pd.DataFrame,
+    filter_log: pd.DataFrame,
+    snapshot: date,
+) -> pd.DataFrame:
+    rows: list[tuple[str, Any]] = [("Snapshot date", snapshot.isoformat())]
+    for step in filter_log.sort_values("step_order").itertuples(index=False):
+        rows.append((f"Scope: {step.step}", f"removed {step.removed}, {step.remaining} remain") if step.removed or step.step != "parsed" else ("Trials parsed from the API", step.remaining))
+    rows.append(("Trials in scope", len(trials)))
     if not trials.empty:
         for sponsor, count in trials["sponsor"].value_counts().items():
             rows.append((f"Trials: {sponsor}", int(count)))
     rows.append(("Active trials with a forecast", len(forecasts)))
     if not forecasts.empty:
+        rows.append(("Forecast model", str(forecasts["model"].iloc[0])))
         for label, count in forecasts["status_label"].value_counts().items():
             rows.append((f"Forecast status: {label}", int(count)))
     rows.append(("Benchmark trials", len(benchmarks)))
     if not benchmarks.empty:
         rows.append(("Median rate per site per month", round(float(benchmarks["rate_per_site_month"].median()), 3)))
-    for row in metrics.itertuples(index=False):
-        rows.append((f"Backtest: {row.metric}", None if pd.isna(row.value) else round(float(row.value), 2)))
+    for row in comparison.itertuples(index=False):
+        if row.median_ape_pct is None or pd.isna(row.median_ape_pct):
+            rows.append((f"Backtest {row.model}", "could not be fitted"))
+            continue
+        rows.append((f"Backtest {row.model}: median abs % error", round(float(row.median_ape_pct), 1)))
+        rows.append((f"Backtest {row.model}: MAPE", round(float(row.mape_pct), 1)))
+        rows.append((f"Backtest {row.model}: inside P25 to P75", round(float(row.coverage_p25_p75_pct), 1)))
     return pd.DataFrame(rows, columns=["Metric", "Value"])
 
 
@@ -85,7 +101,8 @@ def export_excel(conn: sqlite3.Connection, snapshot: date, config: dict[str, Any
     benchmarks = read_table(conn, "benchmarks", snapshot)
     segment = read_table(conn, "segment_rates", snapshot)
     quality = read_table(conn, "data_quality", snapshot)
-    metrics = read_table(conn, "backtest_results", snapshot)
+    comparison = read_table(conn, "model_comparison", snapshot)
+    filter_log = read_table(conn, "filter_log", snapshot)
     labels: dict[str, str] = config["forecast"]["labels"]
 
     if not sites.empty and not trials.empty:
@@ -94,7 +111,7 @@ def export_excel(conn: sqlite3.Connection, snapshot: date, config: dict[str, Any
     wb = Workbook()
     ws = wb.active
     ws.title = "Summary"
-    _write_frame(ws, summary_frame(trials, forecasts, benchmarks, metrics, snapshot), "No data loaded")
+    _write_frame(ws, summary_frame(trials, forecasts, benchmarks, comparison, filter_log, snapshot), "No data loaded")
 
     ws = wb.create_sheet("Active Trials Forecast")
     forecast_view = forecasts.drop(columns=["snapshot_date"], errors="ignore")
@@ -121,7 +138,21 @@ def export_excel(conn: sqlite3.Connection, snapshot: date, config: dict[str, Any
                 cell.number_format = DATE_FORMAT
 
     ws = wb.create_sheet("Data Quality")
-    _write_frame(ws, quality.drop(columns=["snapshot_date"], errors="ignore"), "No missing or unparseable fields found")
+    scope_view = filter_log.drop(columns=["snapshot_date", "step_order"], errors="ignore").rename(columns={"step": "scope_filter"})
+    _write_frame(ws, scope_view, "No scope filter log recorded")
+    ws.auto_filter.ref = None
+    ws.append([])
+    start_row = ws.max_row + 1
+    issues_view = quality.drop(columns=["snapshot_date"], errors="ignore")
+    ws.append(list(issues_view.columns))
+    for cell in ws[start_row]:
+        cell.font = HEADER_FONT
+    if issues_view.empty:
+        ws.append(["No missing or unparseable fields found"])
+    for row in issues_view.itertuples(index=False):
+        ws.append(list(row))
+    ws.column_dimensions["A"].width = 64
+    ws.column_dimensions["B"].width = 28
 
     ws = wb.create_sheet("Method Notes")
     ws.column_dimensions["A"].width = 120

@@ -8,13 +8,15 @@ import pandas as pd
 import typer
 
 from trialpace import api, db
-from trialpace.backtest import run_backtest
+from trialpace.backtest import compare_models, seed_sensitivity, select_model
 from trialpace.config import load_config
 from trialpace.export_excel import export_excel
 from trialpace.export_powerbi import TABLE_DESCRIPTIONS, export_powerbi
-from trialpace.forecast import build_benchmarks, build_forecasts, rates_frame, segment_rates
+from trialpace.forecast import HORIZON_REASON, build_benchmarks, build_forecasts, rates_frame, segment_rates
 from trialpace.method import render_method
 from trialpace.parse import parse_studies
+from trialpace.predictors import MODEL_NAMES, make_predictor
+from trialpace.scope import apply_scope
 
 app = typer.Typer(help="Enrollment pace forecasts for structural heart device trials.", no_args_is_help=True)
 
@@ -67,12 +69,15 @@ def load(config: Path = ConfigOption, snapshot_date: Optional[str] = DateOption)
         typer.echo(f"No raw data for {day}. Available days: {available}. Run `fetch` first.")
         raise typer.Exit(code=1)
     studies = list(api.iter_raw_studies(day_dir))
-    records, skipped = parse_studies(studies, cfg)
+    parsed, skipped = parse_studies(studies, cfg)
+    records, excluded, filter_log = apply_scope(parsed, cfg["scope"])
     conn = db.connect(Path(cfg["paths"]["db_path"]))
-    trials, sites, issues = db.replace_snapshot(conn, day, records)
-    typer.echo(f"Snapshot {day}: {trials} unique trials, {sites} sites, {issues} data quality issues")
+    trials, sites, issues = db.replace_snapshot(conn, day, records, excluded, filter_log)
+    typer.echo(f"Snapshot {day}: {len(parsed)} unique trials parsed, {trials} in scope, {sites} sites, {issues} data quality issues")
     if skipped:
         typer.echo(f"  Skipped {skipped} study objects with no NCT ID")
+    for step in filter_log[1:]:
+        typer.echo(f"  Filter '{step.step}': removed {step.removed}, {step.remaining} remain")
     _warn_if_small("trial snapshot", trials)
     frame = pd.DataFrame([{"sponsor": r.sponsor} for r in records])
     if not frame.empty:
@@ -89,24 +94,40 @@ def forecast(config: Path = ConfigOption, snapshot_date: Optional[str] = DateOpt
     trials = db.read_table(conn, "trials", day)
     benchmarks, bench_excl = build_benchmarks(trials, cfg["forecast"])
     rates = segment_rates(benchmarks, int(cfg["forecast"]["min_segment_count"]))
-    forecasts, fc_excl = build_forecasts(trials, rates, cfg["forecast"])
+    comparison, _, _ = compare_models(benchmarks, cfg)
+    model_name = select_model(comparison, cfg["forecast"])
+    predictor = make_predictor(model_name, cfg["forecast"])
+    fitted = predictor.fit(benchmarks)
+    forecasts, fc_excl = build_forecasts(trials, predictor if fitted else None, cfg["forecast"])
     exclusions = pd.concat([bench_excl.assign(reason="benchmark: " + bench_excl["reason"]), fc_excl.assign(reason="forecast: " + fc_excl["reason"])])
+
+    horizon_reason = HORIZON_REASON.format(horizon=float(cfg["forecast"]["max_horizon_months"]))
+    horizon_rows = []
+    for name in MODEL_NAMES:
+        candidate = make_predictor(name, cfg["forecast"])
+        candidate_fitted = candidate.fit(benchmarks)
+        _, candidate_excl = build_forecasts(trials, candidate if candidate_fitted else None, cfg["forecast"])
+        horizon_rows.append({"model": name, "fitted": int(candidate_fitted), "excluded_by_horizon": int((candidate_excl["reason"] == horizon_reason).sum())})
+    horizon_checks = pd.DataFrame(horizon_rows)
 
     db.replace_rows(conn, "benchmarks", day, benchmarks)
     db.replace_rows(conn, "segment_rates", day, rates_frame(rates))
     db.replace_rows(conn, "forecasts", day, forecasts)
     db.replace_rows(conn, "forecast_exclusions", day, exclusions)
+    db.replace_rows(conn, "horizon_checks", day, horizon_checks)
 
-    typer.echo(f"Snapshot {day}: {len(benchmarks)} benchmark trials, {len(rates)} rate groups, {len(forecasts)} active trials forecast")
+    typer.echo(f"Snapshot {day}: {len(benchmarks)} benchmark trials, {len(forecasts)} active trials forecast with the {model_name} model")
+    if not fitted:
+        typer.echo(f"  The {model_name} model could not be fitted on {len(benchmarks)} benchmark trials, so no forecasts were produced.")
     _warn_if_small("benchmark set", len(benchmarks), int(cfg["forecast"]["min_segment_count"]))
     _warn_if_small("forecast set", len(forecasts))
     if not forecasts.empty:
         for label, count in forecasts["status_label"].value_counts().items():
             typer.echo(f"  {label}: {count}")
-        segment_only = sum(1 for r in rates.values() if r.source == "segment")
-        typer.echo(f"  {segment_only} segments had enough trials for their own rate; the rest use the overall rate")
     if len(exclusions):
         typer.echo(f"  {len(exclusions)} trials excluded (reasons stored in forecast_exclusions)")
+    for row in horizon_checks.itertuples(index=False):
+        typer.echo(f"  Horizon cap would exclude {row.excluded_by_horizon} trials under the {row.model} model" if row.fitted else f"  {row.model} model could not be fitted")
 
 
 @app.command()
@@ -118,20 +139,42 @@ def backtest(config: Path = ConfigOption, snapshot_date: Optional[str] = DateOpt
     benchmarks = db.read_table(conn, "benchmarks", day)
     if benchmarks.empty:
         typer.echo(f"No benchmark rows for {day}. Run `forecast` first.")
-    metrics, predictions = run_backtest(benchmarks, cfg)
+    comparison, predictions, sizes = compare_models(benchmarks, cfg)
+    wins = seed_sensitivity(benchmarks, cfg)
+    metrics = {k: float(v) for k, v in sizes.items()}
+    metrics.update({f"wins_{name}": float(count) for name, count in wins.items()})
     db.replace_rows(conn, "backtest_results", day, pd.DataFrame({"metric": list(metrics), "value": list(metrics.values())}))
+    db.replace_rows(conn, "model_comparison", day, comparison)
     db.replace_rows(conn, "backtest_predictions", day, predictions)
-    rates = db.read_table(conn, "segment_rates", day).drop(columns=["snapshot_date"], errors="ignore")
+    context = {
+        "rates": db.read_table(conn, "segment_rates", day).drop(columns=["snapshot_date"], errors="ignore"),
+        "benchmarks": benchmarks,
+        "filter_log": db.read_table(conn, "filter_log", day),
+        "exclusions": db.read_table(conn, "forecast_exclusions", day),
+        "horizon_checks": db.read_table(conn, "horizon_checks", day),
+        "comparison": comparison,
+        "sizes": sizes,
+        "wins": wins,
+        "sensitivity_seeds": int(cfg["backtest"].get("sensitivity_seeds", 0)),
+    }
     method_path = Path(cfg["paths"]["method_path"])
-    method_path.write_text(render_method(cfg, metrics, rates, benchmarks, day), encoding="utf-8")
+    method_path.write_text(render_method(cfg, context, day), encoding="utf-8")
 
-    typer.echo(f"Backtest on snapshot {day}: {int(metrics['train_count'])} training, {int(metrics['holdout_count'])} holdout")
-    if metrics["mape_pct"] is None:
+    typer.echo(f"Backtest on snapshot {day}: {sizes['train_count']} training, {sizes['holdout_count']} holdout")
+    min_holdout = int(cfg["backtest"]["min_holdout_for_confidence"])
+    if 0 < sizes["holdout_count"] < min_holdout:
+        typer.echo(f"  Note: only {sizes['holdout_count']} holdout trials, fewer than {min_holdout}. The comparison below is thin and can swing with the seed.")
+    if comparison.empty:
         typer.echo("  Not enough benchmark trials to hold any out. No accuracy metrics.")
     else:
-        typer.echo(f"  MAPE on months to primary completion: {metrics['mape_pct']:.1f}%")
-        typer.echo(f"  Median absolute percentage error: {metrics['median_ape_pct']:.1f}%")
-        typer.echo(f"  Actual date inside P25 to P75 range: {metrics['coverage_p25_p75_pct']:.1f}% of holdout trials")
+        typer.echo(f"  {'model':<12}{'holdout':>8}{'median APE':>12}{'MAPE':>10}{'coverage':>10}  selected")
+        for row in comparison.itertuples(index=False):
+            if row.median_ape_pct is None or pd.isna(row.median_ape_pct):
+                typer.echo(f"  {row.model:<12}{row.holdout_n:>8}  could not be fitted")
+                continue
+            typer.echo(f"  {row.model:<12}{row.holdout_n:>8}{row.median_ape_pct:>11.1f}%{row.mape_pct:>9.1f}%{row.coverage_p25_p75_pct:>9.1f}%  {'yes' if row.selected else ''}")
+    if sum(wins.values()):
+        typer.echo("  Lowest median error across " + str(sum(wins.values())) + " alternative splits: " + ", ".join(f"{k} {v}" for k, v in wins.items()))
     typer.echo(f"  Wrote {method_path}")
 
 
