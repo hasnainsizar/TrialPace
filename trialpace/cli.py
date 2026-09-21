@@ -8,7 +8,7 @@ import pandas as pd
 import typer
 
 from trialpace import api, db
-from trialpace.backtest import compare_models, seed_sensitivity, select_model
+from trialpace.backtest import compare_models, duration_by_valve, select_model
 from trialpace.config import load_config
 from trialpace.export_excel import export_excel
 from trialpace.export_powerbi import TABLE_DESCRIPTIONS, export_powerbi
@@ -122,8 +122,9 @@ def forecast(config: Path = ConfigOption, snapshot_date: Optional[str] = DateOpt
     _warn_if_small("benchmark set", len(benchmarks), int(cfg["forecast"]["min_segment_count"]))
     _warn_if_small("forecast set", len(forecasts))
     if not forecasts.empty:
-        for label, count in forecasts["status_label"].value_counts().items():
-            typer.echo(f"  {label}: {count}")
+        counts = forecasts["status_label"].value_counts()
+        for label in cfg["forecast"]["labels"].values():
+            typer.echo(f"  {label}: {int(counts.get(label, 0))}")
     if len(exclusions):
         typer.echo(f"  {len(exclusions)} trials excluded (reasons stored in forecast_exclusions)")
     for row in horizon_checks.itertuples(index=False):
@@ -132,7 +133,7 @@ def forecast(config: Path = ConfigOption, snapshot_date: Optional[str] = DateOpt
 
 @app.command()
 def backtest(config: Path = ConfigOption, snapshot_date: Optional[str] = DateOption) -> None:
-    """Hold out part of the benchmark set, predict it, and report MAPE and range coverage."""
+    """Leave-one-out cross-validate all models on the benchmark set and report accuracy."""
     cfg = load_config(config)
     conn = db.connect(Path(cfg["paths"]["db_path"]))
     day = _snapshot_or_fail(conn, snapshot_date)
@@ -140,9 +141,7 @@ def backtest(config: Path = ConfigOption, snapshot_date: Optional[str] = DateOpt
     if benchmarks.empty:
         typer.echo(f"No benchmark rows for {day}. Run `forecast` first.")
     comparison, predictions, sizes = compare_models(benchmarks, cfg)
-    wins = seed_sensitivity(benchmarks, cfg)
     metrics = {k: float(v) for k, v in sizes.items()}
-    metrics.update({f"wins_{name}": float(count) for name, count in wins.items()})
     db.replace_rows(conn, "backtest_results", day, pd.DataFrame({"metric": list(metrics), "value": list(metrics.values())}))
     db.replace_rows(conn, "model_comparison", day, comparison)
     db.replace_rows(conn, "backtest_predictions", day, predictions)
@@ -154,27 +153,30 @@ def backtest(config: Path = ConfigOption, snapshot_date: Optional[str] = DateOpt
         "horizon_checks": db.read_table(conn, "horizon_checks", day),
         "comparison": comparison,
         "sizes": sizes,
-        "wins": wins,
-        "sensitivity_seeds": int(cfg["backtest"].get("sensitivity_seeds", 0)),
+        "durations": duration_by_valve(benchmarks),
     }
     method_path = Path(cfg["paths"]["method_path"])
     method_path.write_text(render_method(cfg, context, day), encoding="utf-8")
 
-    typer.echo(f"Backtest on snapshot {day}: {sizes['train_count']} training, {sizes['holdout_count']} holdout")
-    min_holdout = int(cfg["backtest"]["min_holdout_for_confidence"])
-    if 0 < sizes["holdout_count"] < min_holdout:
-        typer.echo(f"  Note: only {sizes['holdout_count']} holdout trials, fewer than {min_holdout}. The comparison below is thin and can swing with the seed.")
+    typer.echo(f"Leave-one-out backtest on snapshot {day}: {sizes['folds']} folds over {sizes['benchmark_count']} benchmark trials")
+    min_benchmarks = int(cfg["backtest"]["min_benchmarks_for_confidence"])
+    if 0 < sizes["benchmark_count"] < min_benchmarks:
+        typer.echo(f"  Note: only {sizes['benchmark_count']} benchmark trials, fewer than {min_benchmarks}. The comparison below is thin.")
     if comparison.empty:
-        typer.echo("  Not enough benchmark trials to hold any out. No accuracy metrics.")
+        typer.echo("  Fewer than two benchmark trials, so no model can be cross-validated.")
     else:
-        typer.echo(f"  {'model':<12}{'holdout':>8}{'median APE':>12}{'MAPE':>10}{'coverage':>10}  selected")
+        typer.echo(f"  {'model':<12}{'scored':>8}{'median APE':>12}{'MAPE':>10}{'coverage':>10}  selected")
         for row in comparison.itertuples(index=False):
             if row.median_ape_pct is None or pd.isna(row.median_ape_pct):
-                typer.echo(f"  {row.model:<12}{row.holdout_n:>8}  could not be fitted")
+                typer.echo(f"  {row.model:<12}{row.scored_n:>8}  could not be fitted")
                 continue
-            typer.echo(f"  {row.model:<12}{row.holdout_n:>8}{row.median_ape_pct:>11.1f}%{row.mape_pct:>9.1f}%{row.coverage_p25_p75_pct:>9.1f}%  {'yes' if row.selected else ''}")
-    if sum(wins.values()):
-        typer.echo("  Lowest median error across " + str(sum(wins.values())) + " alternative splits: " + ", ".join(f"{k} {v}" for k, v in wins.items()))
+            typer.echo(f"  {row.model:<12}{row.scored_n:>8}{row.median_ape_pct:>11.1f}%{row.mape_pct:>9.1f}%{row.coverage_p25_p75_pct:>9.1f}%  {'yes' if row.selected else ''}")
+    durations = duration_by_valve(benchmarks)
+    if not durations.empty:
+        typer.echo("  Months from start to primary completion by valve type (benchmark set):")
+        typer.echo(f"  {'valve':<12}{'n':>5}{'P25':>8}{'median':>8}{'P75':>8}")
+        for row in durations.itertuples(index=False):
+            typer.echo(f"  {row.valve_type:<12}{row.n:>5}{row.months_p25:>8.1f}{row.months_median:>8.1f}{row.months_p75:>8.1f}")
     typer.echo(f"  Wrote {method_path}")
 
 

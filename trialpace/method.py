@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -46,34 +47,30 @@ def _benchmark_table(exclusions: pd.DataFrame, benchmark_count: int) -> str:
 
 def _comparison_table(comparison: pd.DataFrame) -> str:
     if comparison.empty:
-        return "The backtest could not run: there were not enough benchmark trials to hold any out."
-    lines = ["| Model | Holdout trials | Median abs. % error | MAPE | Inside P25 to P75 | Selected |", "|---|---|---|---|---|---|"]
+        return "The backtest could not run: fewer than two benchmark trials."
+    lines = ["| Model | Trials scored | Median abs. % error | MAPE | Inside P25 to P75 | Selected |", "|---|---|---|---|---|---|"]
     for row in comparison.itertuples(index=False):
         label = MODEL_LABELS.get(row.model, row.model)
         if row.median_ape_pct is None or pd.isna(row.median_ape_pct):
-            lines.append(f"| {label} | {row.holdout_n} | could not be fitted | | | |")
+            lines.append(f"| {label} | {row.scored_n} | could not be fitted | | | |")
             continue
         lines.append(
-            f"| {label} | {row.holdout_n} | {row.median_ape_pct:.1f}% | {row.mape_pct:.1f}% | "
+            f"| {label} | {row.scored_n} | {row.median_ape_pct:.1f}% | {row.mape_pct:.1f}% | "
             f"{row.coverage_p25_p75_pct:.1f}% | {'yes' if row.selected else ''} |"
         )
     return "\n".join(lines)
 
 
-def _choice_text(comparison: pd.DataFrame, forecast_cfg: dict[str, Any], wins: dict[str, int]) -> str:
-    text = _choice_core(comparison, forecast_cfg)
-    total = sum(wins.values())
-    if total and not comparison.empty:
-        selected = comparison[comparison["selected"] == 1]
-        if not selected.empty and wins.get(str(selected.iloc[0].model), 0) * 2 < total:
-            text += (
-                " Across the alternative seeds no model wins consistently, so the selection is a coin flip between three "
-                "models of similar accuracy rather than a clear winner. The naive baseline is the safe default in that situation."
-            )
-    return text
+def _durations_table(durations: pd.DataFrame) -> str:
+    if durations.empty:
+        return "No benchmark durations were available for this snapshot."
+    lines = ["| Valve type | Trials | P25 | Median | P75 |", "|---|---|---|---|---|"]
+    for row in durations.itertuples(index=False):
+        lines.append(f"| {row.valve_type} | {row.n} | {row.months_p25:.1f} | {row.months_median:.1f} | {row.months_p75:.1f} |")
+    return "\n".join(lines)
 
 
-def _choice_core(comparison: pd.DataFrame, forecast_cfg: dict[str, Any]) -> str:
+def _choice_text(comparison: pd.DataFrame, forecast_cfg: dict[str, Any]) -> str:
     if comparison.empty:
         return "No model was selected because the backtest could not run."
     selected = comparison[comparison["selected"] == 1]
@@ -93,9 +90,14 @@ def _choice_core(comparison: pd.DataFrame, forecast_cfg: dict[str, Any]) -> str:
             f"outputs use the naive baseline: the median duration of completed trials with the same valve type. "
             f"Target enrollment and site count do not improve the prediction enough to be worth using in this data."
         )
+    if naive_err is not None and float(chosen.median_ape_pct) >= naive_err:
+        return (
+            f"**Forecast outputs use the {label} model**, but it does not beat the naive baseline: its median error of "
+            f"{float(chosen.median_ape_pct):.1f}% matches or exceeds the baseline's {naive_err:.1f}%."
+        )
     beats = f" against {naive_err:.1f}% for the naive baseline" if naive_err is not None else ""
     return (
-        f"**Forecast outputs use the {label} model.** It had the lowest median absolute percentage error on the holdout "
+        f"**Forecast outputs use the {label} model.** It had the lowest median absolute percentage error under leave-one-out cross-validation "
         f"({float(chosen.median_ape_pct):.1f}%{beats}). Median error is the selection criterion because MAPE is dominated by a few short trials."
     )
 
@@ -113,23 +115,15 @@ def render_method(config: dict[str, Any], context: dict[str, Any], snapshot: dat
     else:
         parts = [f"{int(r.excluded_by_horizon)} under the {MODEL_LABELS.get(r.model, r.model).lower()} model" if r.fitted else f"{MODEL_LABELS.get(r.model, r.model).lower()} model not fitted" for r in checks.itertuples(index=False)]
         horizon_text = "In this snapshot, after the scope and benchmark filters, the horizon cap excluded " + ", ".join(parts) + "."
-    min_holdout = int(config["backtest"]["min_holdout_for_confidence"])
-    holdout = sizes.get("holdout_count", 0)
-    if 0 < holdout < min_holdout:
+    min_benchmarks = int(config["backtest"]["min_benchmarks_for_confidence"])
+    count = sizes.get("benchmark_count", 0)
+    if 0 < count < min_benchmarks:
         holdout_note = (
-            f"**The holdout has only {holdout} trials, fewer than the {min_holdout} needed for a stable comparison.** "
-            "This ranking can change with a different seed. Treat it as indicative, not settled."
+            f"**Only {count} benchmark trials are available, fewer than the {min_benchmarks} needed for a stable comparison.** "
+            "Every trial is scored, but a handful of unusual trials can still move the ranking. Treat it as indicative, not settled."
         )
     else:
         holdout_note = ""
-    wins: dict[str, int] = context.get("wins", {})
-    total_wins = sum(wins.values())
-    if total_wins:
-        wins_text = "As a check on seed sensitivity, the split was repeated with " + str(total_wins) + " other seeds. Lowest median error: " + ", ".join(
-            f"{MODEL_LABELS.get(k, k).lower()} {v} of {total_wins}" for k, v in wins.items()
-        ) + "."
-    else:
-        wins_text = ""
 
     single_site_pct = 0.0 if benchmarks.empty else float((benchmarks["site_count"] == 1).mean() * 100.0)
     bands = ", ".join(
@@ -137,7 +131,7 @@ def render_method(config: dict[str, Any], context: dict[str, Any], snapshot: dat
         for b in forecast_cfg["size_bands"]
     )
     template = TEMPLATE_PATH.read_text(encoding="utf-8")
-    return template.format(
+    rendered = template.format(
         snapshot=snapshot.isoformat(),
         filter_table=_filter_table(context["filter_log"]),
         benchmark_table=_benchmark_table(exclusions, len(benchmarks)),
@@ -147,17 +141,14 @@ def render_method(config: dict[str, Any], context: dict[str, Any], snapshot: dat
         max_horizon_months=int(horizon),
         horizon_text=horizon_text,
         holdout_note=holdout_note,
-        wins_text=wins_text,
+        durations_table=_durations_table(context.get("durations", pd.DataFrame())),
         on_track_days=thresholds["on_track_max_days"],
         at_risk_days=thresholds["at_risk_max_days"],
-        holdout_pct=int(float(config["backtest"]["holdout_fraction"]) * 100),
-        seed=config["backtest"]["random_seed"],
         size_bands=bands,
         single_site_pct=f"{single_site_pct:.0f}",
         rates_table=_rates_table(context["rates"]),
         benchmark_count=sizes.get("benchmark_count", 0),
-        train_count=sizes.get("train_count", 0),
-        holdout_count=sizes.get("holdout_count", 0),
         comparison_table=_comparison_table(context["comparison"]),
-        choice=_choice_text(context["comparison"], forecast_cfg, wins),
+        choice=_choice_text(context["comparison"], forecast_cfg),
     )
+    return re.sub(r"\n{3,}", "\n\n", rendered)

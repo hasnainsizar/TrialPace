@@ -10,13 +10,7 @@ PREDICTION_COLUMNS = [
     "model", "nct_id", "valve_type", "size_band", "actual_months",
     "pred_months_p25", "pred_months_median", "pred_months_p75", "abs_pct_error", "within_range",
 ]
-COMPARISON_COLUMNS = ["model", "holdout_n", "median_ape_pct", "mape_pct", "coverage_p25_p75_pct", "selected"]
-
-
-def split_holdout(benchmarks: pd.DataFrame, fraction: float, seed: int) -> tuple[pd.DataFrame, pd.DataFrame]:
-    shuffled = benchmarks.sample(frac=1.0, random_state=seed)
-    holdout_size = int(round(len(shuffled) * fraction))
-    return shuffled.iloc[holdout_size:], shuffled.iloc[:holdout_size]
+COMPARISON_COLUMNS = ["model", "scored_n", "median_ape_pct", "mape_pct", "coverage_p25_p75_pct", "selected"]
 
 
 def score_model(name: str, train: pd.DataFrame, holdout: pd.DataFrame, forecast_cfg: dict[str, Any]) -> pd.DataFrame:
@@ -45,27 +39,38 @@ def score_model(name: str, train: pd.DataFrame, holdout: pd.DataFrame, forecast_
     return pd.DataFrame(rows, columns=PREDICTION_COLUMNS)
 
 
-def compare_models(benchmarks: pd.DataFrame, config: dict[str, Any]) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, int]]:
-    """Backtest every model on one shared holdout split.
+def leave_one_out(benchmarks: pd.DataFrame, forecast_cfg: dict[str, Any]) -> pd.DataFrame:
+    """Predict every benchmark trial from a model fitted on all the others."""
+    frames: list[pd.DataFrame] = []
+    for position in range(len(benchmarks)):
+        holdout = benchmarks.iloc[[position]]
+        train = benchmarks.drop(benchmarks.index[position])
+        for name in MODEL_NAMES:
+            frames.append(score_model(name, train, holdout, forecast_cfg))
+    if not frames:
+        return pd.DataFrame(columns=PREDICTION_COLUMNS)
+    return pd.concat(frames, ignore_index=True)
 
-    Returns (comparison table, per-trial predictions, split sizes). The comparison
-    marks the model with the lowest median absolute percentage error as selected.
+
+def compare_models(benchmarks: pd.DataFrame, config: dict[str, Any]) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, int]]:
+    """Leave-one-out cross-validation of every model over the benchmark set.
+
+    Returns (comparison table, per-trial predictions, sizes). The comparison marks
+    the model with the lowest median absolute percentage error as selected.
     """
-    bt_cfg = config["backtest"]
     forecast_cfg = config["forecast"]
-    train, holdout = split_holdout(benchmarks, float(bt_cfg["holdout_fraction"]), int(bt_cfg["random_seed"]))
-    sizes = {"benchmark_count": len(benchmarks), "train_count": len(train), "holdout_count": len(holdout)}
-    if train.empty or holdout.empty:
+    sizes = {"benchmark_count": len(benchmarks), "folds": len(benchmarks)}
+    if len(benchmarks) < 2:
         return pd.DataFrame(columns=COMPARISON_COLUMNS), pd.DataFrame(columns=PREDICTION_COLUMNS), sizes
 
-    predictions = pd.concat([score_model(name, train, holdout, forecast_cfg) for name in MODEL_NAMES], ignore_index=True)
+    predictions = leave_one_out(benchmarks, forecast_cfg)
     rows: list[dict[str, Any]] = []
     for name in MODEL_NAMES:
         scored = predictions[predictions["model"] == name]
         rows.append(
             {
                 "model": name,
-                "holdout_n": len(scored),
+                "scored_n": len(scored),
                 "median_ape_pct": float(scored["abs_pct_error"].median()) if len(scored) else None,
                 "mape_pct": float(scored["abs_pct_error"].mean()) if len(scored) else None,
                 "coverage_p25_p75_pct": float(scored["within_range"].mean() * 100.0) if len(scored) else None,
@@ -91,15 +96,14 @@ def select_model(comparison: pd.DataFrame, forecast_cfg: dict[str, Any]) -> str:
     return MODEL_NAIVE if MODEL_NAIVE in tied else tied[0]
 
 
-def seed_sensitivity(benchmarks: pd.DataFrame, config: dict[str, Any]) -> dict[str, int]:
-    """Count how often each model has the lowest median error across alternative seeds."""
-    seeds = int(config["backtest"].get("sensitivity_seeds", 0))
-    wins = {name: 0 for name in MODEL_NAMES}
-    auto_cfg = dict(config["forecast"], model="auto")
-    for seed in range(seeds):
-        alt = {**config, "backtest": {**config["backtest"], "random_seed": seed}, "forecast": auto_cfg}
-        comparison, _, _ = compare_models(benchmarks, alt)
-        if comparison.empty:
-            continue
-        wins[select_model(comparison, auto_cfg)] += 1
-    return wins
+def duration_by_valve(benchmarks: pd.DataFrame) -> pd.DataFrame:
+    """Median and quartile months from start to primary completion per valve type."""
+    columns = ["valve_type", "n", "months_p25", "months_median", "months_p75"]
+    if benchmarks.empty:
+        return pd.DataFrame(columns=columns)
+    rows = []
+    for valve, group in benchmarks.groupby("valve_type"):
+        months = group["months"]
+        rows.append({"valve_type": valve, "n": len(group), "months_p25": float(months.quantile(0.25)), "months_median": float(months.median()), "months_p75": float(months.quantile(0.75))})
+    rows.append({"valve_type": "all", "n": len(benchmarks), "months_p25": float(benchmarks["months"].quantile(0.25)), "months_median": float(benchmarks["months"].median()), "months_p75": float(benchmarks["months"].quantile(0.75))})
+    return pd.DataFrame(rows, columns=columns)

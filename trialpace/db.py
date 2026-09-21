@@ -140,7 +140,7 @@ CREATE TABLE IF NOT EXISTS backtest_results (
 CREATE TABLE IF NOT EXISTS model_comparison (
     snapshot_date TEXT NOT NULL,
     model TEXT NOT NULL,
-    holdout_n INTEGER NOT NULL,
+    scored_n INTEGER NOT NULL,
     median_ape_pct REAL,
     mape_pct REAL,
     coverage_p25_p75_pct REAL,

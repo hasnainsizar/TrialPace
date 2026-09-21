@@ -152,12 +152,9 @@ forecast:
     no_posted_date: No posted date
 
 backtest:
-  holdout_fraction: 0.2
-  random_seed: 42
-  # Below this many holdout trials the comparison is flagged as thin.
-  min_holdout_for_confidence: 20
-  # Extra splits (seeds 0 to n-1) used only to report how often each model wins.
-  sensitivity_seeds: 10
+  # Leave-one-out cross-validation over every benchmark trial.
+  # Below this many benchmark trials the comparison is flagged as thin.
+  min_benchmarks_for_confidence: 30
 
 paths:
   raw_dir: data/raw

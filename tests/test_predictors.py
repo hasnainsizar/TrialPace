@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from trialpace.backtest import compare_models, select_model
+from trialpace.backtest import compare_models, duration_by_valve, leave_one_out, select_model
 from trialpace.predictors import MODEL_NAIVE, MODEL_RATE, MODEL_REGRESSION, NaivePredictor, RegressionPredictor, make_predictor
 
 
@@ -78,28 +78,62 @@ def test_make_predictor_rejects_unknown_model(config: dict[str, Any]) -> None:
         make_predictor("oracle", config["forecast"])
 
 
-def test_compare_models_scores_all_three_on_same_holdout(config: dict[str, Any]) -> None:
-    comparison, predictions, sizes = compare_models(_benchmarks(100), config)
+def test_leave_one_out_scores_every_trial_once_per_model(config: dict[str, Any]) -> None:
+    benchmarks = _benchmarks(40)
+    predictions = leave_one_out(benchmarks, config["forecast"])
+    for name in (MODEL_RATE, MODEL_REGRESSION, MODEL_NAIVE):
+        scored = predictions[predictions["model"] == name]
+        assert sorted(scored["nct_id"]) == sorted(benchmarks["nct_id"])
+
+
+def test_leave_one_out_never_trains_on_the_held_out_trial(config: dict[str, Any]) -> None:
+    benchmarks = _benchmarks(30)
+    outlier = benchmarks.index[0]
+    benchmarks.loc[outlier, "months"] = 1000.0
+    predictions = leave_one_out(benchmarks, config["forecast"])
+    naive = predictions[(predictions["model"] == MODEL_NAIVE) & (predictions["nct_id"] == benchmarks.loc[outlier, "nct_id"])]
+    assert naive.iloc[0]["pred_months_median"] < 100
+
+
+def test_compare_models_scores_all_three_and_selects_lowest_median_error(config: dict[str, Any]) -> None:
+    comparison, predictions, sizes = compare_models(_benchmarks(60), config)
     assert list(comparison["model"]) == [MODEL_RATE, MODEL_REGRESSION, MODEL_NAIVE]
-    assert sizes == {"benchmark_count": 100, "train_count": 80, "holdout_count": 20}
-    assert comparison["holdout_n"].tolist() == [20, 20, 20]
-    holdout_ids = {frozenset(predictions[predictions["model"] == m]["nct_id"]) for m in comparison["model"]}
-    assert len(holdout_ids) == 1
+    assert sizes == {"benchmark_count": 60, "folds": 60}
+    assert comparison["scored_n"].tolist() == [60, 60, 60]
+    assert len(predictions) == 180
     assert comparison["selected"].sum() == 1
     assert comparison.loc[comparison["selected"] == 1, "model"].iloc[0] == MODEL_REGRESSION
+    assert comparison.set_index("model").loc[MODEL_REGRESSION, "median_ape_pct"] == pytest.approx(0.0, abs=1e-6)
 
 
 def test_compare_models_is_deterministic(config: dict[str, Any]) -> None:
-    first, _, _ = compare_models(_benchmarks(50), config)
-    second, _, _ = compare_models(_benchmarks(50), config)
+    first, _, _ = compare_models(_benchmarks(30), config)
+    second, _, _ = compare_models(_benchmarks(30), config)
     pd.testing.assert_frame_equal(first, second)
 
 
-def test_compare_models_on_empty_benchmarks(config: dict[str, Any]) -> None:
-    comparison, predictions, sizes = compare_models(_benchmarks(0), config)
+def test_compare_models_reports_unfittable_models(config: dict[str, Any]) -> None:
+    comparison, _, _ = compare_models(_benchmarks(10), config)
+    by_model = comparison.set_index("model")
+    assert by_model.loc[MODEL_REGRESSION, "scored_n"] == 0
+    assert pd.isna(by_model.loc[MODEL_REGRESSION, "median_ape_pct"])
+    assert by_model.loc[MODEL_NAIVE, "scored_n"] == 10
+
+
+def test_compare_models_needs_two_benchmarks(config: dict[str, Any]) -> None:
+    comparison, predictions, sizes = compare_models(_benchmarks(1), config)
     assert comparison.empty
     assert predictions.empty
-    assert sizes["holdout_count"] == 0
+    assert sizes == {"benchmark_count": 1, "folds": 1}
+
+
+def test_duration_by_valve_includes_overall_row() -> None:
+    frame = pd.DataFrame({"valve_type": ["aortic", "aortic", "mitral"], "months": [10.0, 20.0, 30.0]})
+    durations = duration_by_valve(frame)
+    assert durations["valve_type"].tolist() == ["aortic", "mitral", "all"]
+    assert durations.set_index("valve_type").loc["aortic", "months_median"] == pytest.approx(15.0)
+    assert durations.set_index("valve_type").loc["all", "n"] == 3
+    assert duration_by_valve(frame.iloc[0:0]).empty
 
 
 def test_select_model_prefers_naive_on_ties_and_honors_override(config: dict[str, Any]) -> None:

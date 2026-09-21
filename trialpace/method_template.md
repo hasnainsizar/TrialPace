@@ -20,7 +20,7 @@ Completed trials in scope that report an ACTUAL enrollment count, a start date, 
 
 ## Models
 
-Three models are fitted on the benchmark set and compared on the same holdout.
+Three models are fitted on the benchmark set and compared by leave-one-out cross-validation.
 
 1. **Per-site rate.** Rate = actual enrollment / listed sites / months from start to primary completion, in patients per site per month. Benchmark trials are grouped by valve type (aortic, mitral, tricuspid, other) and size band ({size_bands}). Each segment with at least {min_segment_count} trials gets its own P25, median, and P75 rate; smaller segments fall back to the overall rate. Months to target = target enrollment / (site count x rate). The P75 rate gives the early date and the P25 rate the late date.
 2. **Log-linear regression.** Ordinary least squares of log(months) on log(target enrollment), log(site count), and valve type indicators. The median forecast is the fitted value plus the median training residual; the P25 and P75 add the 25th and 75th percentile residuals. This lets duration scale with target and sites without assuming the two cancel exactly.
@@ -36,19 +36,23 @@ Patients per site per month, from the benchmark set.
 
 {rates_table}
 
+## Duration by valve type
+
+Months from start to primary completion in the benchmark set. This is what the naive baseline predicts.
+
+{durations_table}
+
 ## Backtest and model choice
 
-{holdout_pct}% of the benchmark trials are held out at random with seed {seed}. Every model is fitted on the remaining trials and predicts each held-out trial's months from start to primary completion. Benchmark trials: {benchmark_count}. Training set: {train_count}. Holdout: {holdout_count}.
+Leave-one-out cross-validation: each of the {benchmark_count} benchmark trials is held out in turn, every model is fitted on the other trials, and the held-out trial's months from start to primary completion is predicted. Every trial is scored exactly once per model, so there is no random split and no seed.
 
 {comparison_table}
 
 {holdout_note}
 
-{wins_text}
-
 {choice}
 
-Median absolute percentage error is the more representative number; MAPE is pulled up by a few short trials. Coverage is the share of holdout trials whose actual duration fell inside the model's P25 to P75 range. A well calibrated range would cover about 50%.
+Median absolute percentage error is the more representative number; MAPE is pulled up by a few short trials. Coverage is the share of trials whose actual duration fell inside the model's P25 to P75 range. A well calibrated range would cover about 50%.
 
 ## What the forecast ignores
 

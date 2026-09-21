@@ -46,19 +46,18 @@ Choices made where the brief left room for interpretation, and why.
 
 ## Models and selection
 
-- **Three models, one shared split.** The per-site rate, a log-linear regression, and a naive valve-type median are all fitted on the same training rows and scored on the same holdout rows, so the comparison is fair.
+- **Three models, one cross-validation.** The per-site rate, a log-linear regression, and a naive valve-type median are scored on the same leave-one-out folds, so the comparison is fair.
 - **Regression is plain least squares with numpy.** No scikit-learn dependency. Valve type enters as indicator columns with the alphabetically first type as the reference. The P25 and P75 come from the empirical residual quantiles, which keeps the range explainable.
 - **Regression needs 20 benchmark rows to fit.** Set by `min_regression_rows`. Below that it reports "could not be fitted" rather than producing a degenerate fit.
 - **Selection uses median absolute percentage error.** MAPE was ruled out because a few short trials dominate it. Ties go to the naive baseline. `forecast.model` can force a model.
 - **The horizon cap applies to whichever model is selected**, and the count under each model is reported so the safety net stays visible even when the selected model cannot trip it.
-- **Seed sensitivity is reported, not used for selection.** The brief asked for one fixed seed. With 11 holdout trials the ranking moves with the seed, so `backtest` also reruns the split with seeds 0 to 9 and reports how often each model wins. That number goes in METHOD.md so the reader can judge how settled the choice is.
 - **The forecast command runs the comparison itself** so that it can pick a model without depending on `backtest` having run first. `backtest` repeats the same deterministic comparison, stores it, and renders METHOD.md.
 
 ## Backtest
 
-- **Holdout is 20% with a fixed seed of 42.** Rates are rebuilt from the other 80% so the holdout is not scored against rates that included it.
+- **Leave-one-out cross-validation replaced the single holdout split.** The first version held out 20% of benchmarks with a fixed seed. After the scope filters that left 11 holdout trials, and a seed sensitivity check showed the model ranking changed with the seed. Leave-one-out scores every benchmark trial exactly once per model, uses all 54 trials, and has no seed, so the seed sensitivity check was removed as redundant. The cost is one fit per trial per model, which is negligible at this size.
 - **Error is measured in months, not days.** Both MAPE and median absolute percentage error are reported, because a few very short benchmark trials dominate the mean.
-- **A holdout under 20 trials is flagged as thin** in the CLI output and METHOD.md. Set by `min_holdout_for_confidence`.
+- **A benchmark set under 30 trials is flagged as thin** in the CLI output and METHOD.md. Set by `min_benchmarks_for_confidence`. Cross-validation uses every trial, but a handful of unusual ones can still move the ranking.
 - **METHOD.md is generated.** The `backtest` command renders it from `trialpace/method_template.md` so the numbers in it always match the database. Editing the prose means editing the template.
 
 ## Outputs
