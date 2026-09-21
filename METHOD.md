@@ -4,49 +4,78 @@ Last generated from the 2026-09-21 snapshot by the `backtest` command. Numbers b
 
 ## What the forecast does
 
-The question is: given how fast similar trials have enrolled in the past, when will an active trial reach its enrollment target?
+The question is: given how long comparable completed trials took, when will an active trial reach its enrollment target?
 
-1. **Benchmark set.** Completed trials that report an ACTUAL enrollment count, a start date, and an ACTUAL primary completion date, with at least one listed site and a duration of at least 3.0 months.
-2. **Rate per benchmark trial.** Enrollment rate = actual enrollment / number of listed sites / months from start to primary completion. The unit is patients per site per month.
-3. **Segments.** Benchmark trials are grouped by valve type (aortic, mitral, tricuspid, other) and trial size band (small (up to 100), medium (up to 500), large (above the previous band)). Each segment with at least 5 trials gets its own P25, median, and P75 rate. Smaller segments fall back to the overall rate across all benchmark trials.
-4. **Forecast per active trial.** For each recruiting or active-not-recruiting trial: months to target = target enrollment / (site count x segment rate). The P75 rate gives the early date, the median rate gives the median date, and the P25 rate gives the late date. Each is added to the trial's start date. The result is always a range, never a single date. Trials whose median forecast runs past 240 months from start are excluded and listed with a reason, because that pattern almost always means a large target with an incomplete site list.
-5. **Status label.** Gap = median forecast date minus the sponsor's posted primary completion date. Up to 90 days is On track, up to 365 days is At risk, beyond that is Likely late. A negative gap means the forecast is ahead of the posted date. Trials with no posted date get their own label.
+## Trial scope
 
-## Benchmark rates in this snapshot
+The API search is broad on purpose (any interventional trial since 2010 matching the valve conditions or transcatheter terms). Scope filters then narrow it to industry device trials. Each step and what it removed:
 
-Patients per site per month.
+| Step | Removed | Remaining |
+|---|---|---|
+| parsed | 0 | 1444 |
+| no DEVICE intervention | 729 | 715 |
+| no transcatheter term or product name in title or interventions | 269 | 446 |
+| lead sponsor class is not INDUSTRY | 154 | 292 |
+
+## Benchmark set
+
+Completed trials in scope that report an ACTUAL enrollment count, a start date, an ACTUAL primary completion date, at least 5 listed sites, and a duration of at least 3.0 months.
+
+| Reason | Trials removed |
+|---|---|
+| fewer than 5 sites listed | 27 |
+| Kept as benchmarks | 54 |
+
+## Models
+
+Three models are fitted on the benchmark set and compared on the same holdout.
+
+1. **Per-site rate.** Rate = actual enrollment / listed sites / months from start to primary completion, in patients per site per month. Benchmark trials are grouped by valve type (aortic, mitral, tricuspid, other) and size band (small (up to 100), medium (up to 500), large (above the previous band)). Each segment with at least 5 trials gets its own P25, median, and P75 rate; smaller segments fall back to the overall rate. Months to target = target enrollment / (site count x rate). The P75 rate gives the early date and the P25 rate the late date.
+2. **Log-linear regression.** Ordinary least squares of log(months) on log(target enrollment), log(site count), and valve type indicators. The median forecast is the fitted value plus the median training residual; the P25 and P75 add the 25th and 75th percentile residuals. This lets duration scale with target and sites without assuming the two cancel exactly.
+3. **Naive baseline.** The P25, median, and P75 duration of completed trials with the same valve type, ignoring target and sites. Valve types with fewer than 5 trials use the overall distribution.
+
+For every model, each duration is added to the trial's start date, and the result is always a range, never a single date. Trials whose median forecast runs past 240 months from start are excluded and listed with a reason. In this snapshot, after the scope and benchmark filters, the horizon cap excluded 0 under the naive baseline model, 20 under the per-site rate model, 0 under the log-linear regression model.
+
+**Status label.** Gap = median forecast date minus the sponsor's posted primary completion date. Up to 90 days is On track, up to 365 days is At risk, beyond that is Likely late. A negative gap means the forecast is ahead of the posted date. Trials with no posted date get their own label.
+
+## Per-site rates in this snapshot
+
+Patients per site per month, from the benchmark set.
 
 | Valve type | Size band | Trials | P25 | Median | P75 | Source |
 |---|---|---|---|---|---|---|
-| all | all | 469 | 0.389 | 1.107 | 3.159 | overall |
-| aortic | large | 25 | 0.739 | 1.003 | 6.675 | segment |
-| aortic | medium | 77 | 0.518 | 2.370 | 4.572 | segment |
-| aortic | small | 139 | 0.598 | 1.185 | 2.371 | segment |
-| mitral | medium | 18 | 0.206 | 1.255 | 12.846 | segment |
-| mitral | small | 45 | 0.134 | 0.355 | 2.183 | segment |
-| other | medium | 29 | 0.428 | 2.609 | 6.297 | segment |
-| other | small | 100 | 0.453 | 1.055 | 2.337 | segment |
-| tricuspid | medium | 5 | 0.301 | 1.858 | 8.798 | segment |
-| tricuspid | small | 26 | 0.160 | 0.356 | 1.530 | segment |
+| all | all | 54 | 0.206 | 0.466 | 0.962 | overall |
+| aortic | large | 9 | 0.634 | 0.986 | 1.003 | segment |
+| aortic | medium | 14 | 0.431 | 0.713 | 1.113 | segment |
+| aortic | small | 16 | 0.408 | 0.590 | 0.918 | segment |
+| mitral | medium | 5 | 0.153 | 0.197 | 0.235 | segment |
+| mitral | small | 5 | 0.031 | 0.046 | 0.096 | segment |
+| tricuspid | small | 5 | 0.160 | 0.162 | 0.179 | segment |
+
+## Backtest and model choice
+
+20% of the benchmark trials are held out at random with seed 42. Every model is fitted on the remaining trials and predicts each held-out trial's months from start to primary completion. Benchmark trials: 54. Training set: 43. Holdout: 11.
+
+| Model | Holdout trials | Median abs. % error | MAPE | Inside P25 to P75 | Selected |
+|---|---|---|---|---|---|
+| Per-site rate | 11 | 50.1% | 46.0% | 45.5% |  |
+| Log-linear regression | 11 | 44.5% | 41.5% | 27.3% |  |
+| Naive baseline | 11 | 11.9% | 25.8% | 81.8% | yes |
+
+**The holdout has only 11 trials, fewer than the 20 needed for a stable comparison.** This ranking can change with a different seed. Treat it as indicative, not settled.
+
+As a check on seed sensitivity, the split was repeated with 10 other seeds. Lowest median error: per-site rate 3 of 10, log-linear regression 4 of 10, naive baseline 3 of 10.
+
+**Neither the per-site rate model nor the regression beat the naive baseline** on median error, so the forecast outputs use the naive baseline: the median duration of completed trials with the same valve type. Target enrollment and site count do not improve the prediction enough to be worth using in this data. Across the alternative seeds no model wins consistently, so the selection is a coin flip between three models of similar accuracy rather than a clear winner. The naive baseline is the safe default in that situation.
+
+Median absolute percentage error is the more representative number; MAPE is pulled up by a few short trials. Coverage is the share of holdout trials whose actual duration fell inside the model's P25 to P75 range. A well calibrated range would cover about 50%.
 
 ## What the forecast ignores
 
 - **Sites open at different times.** The site count is the number listed today. Early in a trial, far fewer sites are usually active, so the real per-site rate over the whole trial is lower than the peak rate.
 - **Enrollment pauses.** Regulatory holds, protocol amendments, supply issues, and seasonal slowdowns are invisible in the registry.
 - **Protocol changes.** Targets and completion dates get revised. The forecast uses whatever is posted now.
-- **Site count is a snapshot.** Sites listed on ClinicalTrials.gov include closed, withdrawn, and never-activated sites, and some sponsors list sites late or not at all. In this snapshot 58% of benchmark trials list exactly one site, so the per-site rate is really a per-listed-site rate.
-- **Primary completion is not enrollment completion.** The benchmark rate uses primary completion as the end point because the registry does not report the date enrollment closed. Trials with long follow-up before the primary endpoint will look slower than they enrolled.
+- **Site count is a snapshot.** Sites listed on ClinicalTrials.gov include closed, withdrawn, and never-activated sites, and some sponsors list sites late or not at all. In this snapshot 0% of benchmark trials list exactly one site.
+- **Primary completion is not enrollment completion.** The benchmark duration runs to primary completion because the registry does not report when enrollment closed. Trials with long follow-up before the primary endpoint look slower than they enrolled.
 - **Month-precision dates.** Most registry dates carry only year and month. They are treated as the first of the month.
-- **Active not recruiting trials.** These trials have usually finished enrolling. Their forecast shows what the benchmark rate would have predicted, which is useful as a check but not as a forecast of remaining work.
-
-## Backtest
-
-20% of the benchmark trials are held out at random with a fixed seed. Rates are rebuilt from the remaining trials, then each held-out trial's duration is predicted from its start date, site count, and actual enrollment. The prediction is compared to the actual months from start to primary completion.
-
-Benchmark trials: 469. Training set: 375. Holdout: 94.
-
-- MAPE on duration in months (median forecast vs actual): 247.2%
-- Median absolute percentage error: 68.5%
-- Share of holdout trials whose actual duration fell inside the P25 to P75 range: 52.1%
-
-MAPE is pulled up by a few short trials that the rate predicts as long. The median absolute percentage error is the more representative number. Treat the P25 to P75 range as the honest output and the median as a reference point, not a commitment.
+- **Active not recruiting trials.** These trials have usually finished enrolling. Their forecast shows what the model would have predicted, which is useful as a check but not as a forecast of remaining work.
