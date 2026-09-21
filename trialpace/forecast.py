@@ -48,11 +48,12 @@ def build_benchmarks(trials: pd.DataFrame, forecast_cfg: dict[str, Any]) -> tupl
 
     days_per_month = float(forecast_cfg["days_per_month"])
     min_months = float(forecast_cfg["min_months"])
+    min_sites = int(forecast_cfg["min_benchmark_sites"])
     candidates = trials[trials["overall_status"].isin(forecast_cfg["benchmark_statuses"])]
     rows: list[dict[str, Any]] = []
     exclusions: list[dict[str, Any]] = []
     for row in candidates.itertuples(index=False):
-        reason = _benchmark_exclusion(row, min_months, days_per_month)
+        reason = _benchmark_exclusion(row, min_months, min_sites, days_per_month)
         if reason:
             exclusions.append({"nct_id": row.nct_id, "reason": reason})
             continue
@@ -76,7 +77,7 @@ def build_benchmarks(trials: pd.DataFrame, forecast_cfg: dict[str, Any]) -> tupl
     return pd.DataFrame(rows, columns=columns), pd.DataFrame(exclusions, columns=["nct_id", "reason"])
 
 
-def _benchmark_exclusion(row: Any, min_months: float, days_per_month: float) -> str | None:
+def _benchmark_exclusion(row: Any, min_months: float, min_sites: int, days_per_month: float) -> str | None:
     if row.enrollment_type != "ACTUAL":
         return "enrollment type is not ACTUAL"
     if pd.isna(row.enrollment_count) or int(row.enrollment_count) <= 0:
@@ -89,6 +90,8 @@ def _benchmark_exclusion(row: Any, min_months: float, days_per_month: float) -> 
         return "primary completion date is not ACTUAL"
     if int(row.site_count) <= 0:
         return "no sites listed"
+    if int(row.site_count) < min_sites:
+        return f"fewer than {min_sites} sites listed"
     months = months_between(row.start_date.date(), row.primary_completion_date.date(), days_per_month)
     if months < min_months:
         return f"duration under {min_months} months"
@@ -156,19 +159,22 @@ def label_status(gap_days: int | None, forecast_cfg: dict[str, Any]) -> str:
 
 FORECAST_COLUMNS = [
     "nct_id", "sponsor", "overall_status", "valve_type", "size_band", "target_enrollment", "site_count",
-    "start_date", "rate_source", "months_p25", "months_median", "months_p75",
+    "start_date", "model", "basis", "months_p25", "months_median", "months_p75",
     "date_p25", "date_median", "date_p75", "posted_primary_completion_date",
     "posted_primary_completion_type", "gap_days", "status_label",
 ]
 
 
+HORIZON_REASON = "median forecast exceeds the {horizon:.0f} month horizon"
+
+
 def build_forecasts(
     trials: pd.DataFrame,
-    rates: dict[tuple[str, str], RateQuantiles],
+    predictor: Any,
     forecast_cfg: dict[str, Any],
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Forecast every active trial. Returns (forecasts, exclusions)."""
-    if trials.empty or not rates:
+    """Forecast every active trial with a fitted predictor. Returns (forecasts, exclusions)."""
+    if trials.empty or predictor is None:
         return pd.DataFrame(columns=FORECAST_COLUMNS), pd.DataFrame(columns=["nct_id", "reason"])
     days_per_month = float(forecast_cfg["days_per_month"])
     max_horizon = float(forecast_cfg["max_horizon_months"])
@@ -188,10 +194,10 @@ def build_forecasts(
         target = int(row.enrollment_count)
         sites = int(row.site_count)
         band = size_band(target, forecast_cfg["size_bands"])
-        quantiles = lookup_rate(rates, row.valve_type, band)
-        m25, m50, m75 = forecast_months(target, sites, quantiles)
+        prediction = predictor.predict(target, sites, row.valve_type)
+        m25, m50, m75 = prediction.months_p25, prediction.months_median, prediction.months_p75
         if m50 > max_horizon:
-            exclusions.append({"nct_id": row.nct_id, "reason": f"median forecast exceeds the {max_horizon:.0f} month horizon; site list is probably incomplete"})
+            exclusions.append({"nct_id": row.nct_id, "reason": HORIZON_REASON.format(horizon=max_horizon)})
             continue
         start = row.start_date.date()
         d25, d50, d75 = (add_months(start, m, days_per_month) for m in (m25, m50, m75))
@@ -207,7 +213,8 @@ def build_forecasts(
                 "target_enrollment": target,
                 "site_count": sites,
                 "start_date": pd.Timestamp(start),
-                "rate_source": quantiles.source,
+                "model": predictor.name,
+                "basis": prediction.basis,
                 "months_p25": m25,
                 "months_median": m50,
                 "months_p75": m75,
