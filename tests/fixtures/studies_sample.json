@@ -1,0 +1,64 @@
+{
+  "studies": [
+    {
+      "protocolSection": {
+        "identificationModule": {"nctId": "NCT00000001", "briefTitle": "SAPIEN Valve in Severe Aortic Stenosis"},
+        "statusModule": {
+          "overallStatus": "COMPLETED",
+          "startDateStruct": {"date": "2015-01"},
+          "primaryCompletionDateStruct": {"date": "2017-01", "type": "ACTUAL"},
+          "completionDateStruct": {"date": "2018-06"},
+          "lastUpdatePostDateStruct": {"date": "2021-04-08"}
+        },
+        "sponsorCollaboratorsModule": {"leadSponsor": {"name": "Edwards Lifesciences"}},
+        "conditionsModule": {"conditions": ["Aortic Stenosis"]},
+        "designModule": {"phases": ["NA"], "enrollmentInfo": {"count": 240, "type": "ACTUAL"}},
+        "armsInterventionsModule": {"interventions": [{"name": "SAPIEN 3 valve"}]},
+        "contactsLocationsModule": {"locations": [
+          {"facility": "Hospital A", "city": "Denver", "state": "Colorado", "country": "United States"},
+          {"facility": "Hospital B", "city": "Boston", "state": "Massachusetts", "country": "United States"},
+          {"facility": "Hospital C", "city": "Toronto", "state": "Ontario", "country": "Canada"},
+          {"facility": "Hospital D", "city": "Paris", "country": "France"},
+          {"facility": "Hospital E", "city": "Berlin", "country": "Germany"}
+        ]}
+      }
+    },
+    {
+      "protocolSection": {
+        "identificationModule": {"nctId": "NCT00000002", "briefTitle": "Transcatheter Mitral Repair Registry Trial"},
+        "statusModule": {
+          "overallStatus": "RECRUITING",
+          "startDateStruct": {"date": "2024-03-15"},
+          "primaryCompletionDateStruct": {"date": "2026-12", "type": "ESTIMATED"},
+          "completionDateStruct": {"date": "2028-12"},
+          "lastUpdatePostDateStruct": {"date": "2025-08-01"}
+        },
+        "sponsorCollaboratorsModule": {"leadSponsor": {"name": "Abbott Medical Devices"}},
+        "conditionsModule": {"conditions": ["Mitral Regurgitation"]},
+        "designModule": {"phases": ["NA"], "enrollmentInfo": {"count": 100, "type": "ESTIMATED"}},
+        "armsInterventionsModule": {"interventions": [{"name": "MitraClip"}]},
+        "contactsLocationsModule": {"locations": [
+          {"facility": "Clinic X", "city": "Chicago", "state": "Illinois", "country": "United States", "status": "RECRUITING"},
+          {"facility": "Clinic Y", "city": "Houston", "state": "Texas", "country": "United States", "status": "RECRUITING"}
+        ]}
+      }
+    },
+    {
+      "protocolSection": {
+        "identificationModule": {"nctId": "NCT00000003"},
+        "statusModule": {"overallStatus": "RECRUITING"},
+        "sponsorCollaboratorsModule": {"leadSponsor": {"name": "University Hospital Somewhere"}},
+        "conditionsModule": {"conditions": ["Tricuspid Regurgitation"]},
+        "designModule": {"phases": ["NA"]},
+        "armsInterventionsModule": {"interventions": []},
+        "contactsLocationsModule": {"locations": [{"city": "Nowhere"}]}
+      }
+    },
+    {
+      "protocolSection": {
+        "identificationModule": {"briefTitle": "Study with no NCT ID"},
+        "statusModule": {"overallStatus": "COMPLETED"}
+      }
+    }
+  ]
+}
