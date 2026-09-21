@@ -27,11 +27,13 @@ class TrialRecord:
     nct_id: str
     title: str | None
     lead_sponsor_raw: str | None
+    lead_sponsor_class: str | None
     sponsor: str
     overall_status: str | None
     phase: str | None
     conditions: str | None
     interventions: str | None
+    intervention_types: str | None
     enrollment_count: int | None
     enrollment_type: str | None
     start_date: date | None

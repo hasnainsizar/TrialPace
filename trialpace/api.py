@@ -67,9 +67,13 @@ def fetch_query(config: dict[str, Any], query_param: str, value: str, out_dir: P
     """Fetch every page for one query into out_dir. Returns the study count."""
     out_dir.mkdir(parents=True, exist_ok=True)
     manifest_path = out_dir / "manifest.json"
+    fields = list(config["api"]["fields"])
     if manifest_path.exists():
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-        return int(manifest.get("study_count", 0))
+        if manifest.get("fields") == fields:
+            return int(manifest.get("study_count", 0))
+        for stale in out_dir.glob("page_*.json"):
+            stale.unlink()
 
     session = session or requests.Session()
     params = build_params(config, query_param, value)
@@ -88,7 +92,7 @@ def fetch_query(config: dict[str, Any], query_param: str, value: str, out_dir: P
         next_token = payload.get("nextPageToken")
         if not next_token:
             break
-    manifest = {"query_param": query_param, "value": value, "pages": page, "study_count": total}
+    manifest = {"query_param": query_param, "value": value, "pages": page, "study_count": total, "fields": fields}
     manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     return total
 

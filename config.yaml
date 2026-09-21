@@ -15,6 +15,8 @@ api:
     - Phase
     - Condition
     - InterventionName
+    - InterventionType
+    - LeadSponsorClass
     - EnrollmentCount
     - EnrollmentType
     - StartDate
@@ -42,6 +44,45 @@ search:
     - transcatheter tricuspid
   study_type: INTERVENTIONAL
   start_date_min: "2010-01-01"
+
+# Scope filters applied at load time, in this order. Each step logs what it removed.
+scope:
+  require_device_intervention: true
+  device_intervention_type: DEVICE
+  require_transcatheter_term: true
+  # Matched case-insensitively against the title and intervention names.
+  transcatheter_terms:
+    - TAVR
+    - TAVI
+    - transcatheter
+  product_names:
+    - SAPIEN
+    - Evolut
+    - CoreValve
+    - Navitor
+    - Portico
+    - Acurate
+    - Lotus
+    - Myval
+    - Allegra
+    - JenaValve
+    - Centera
+    - MitraClip
+    - PASCAL
+    - Tendyne
+    - Intrepid
+    - Cardioband
+    - Carillon
+    - Cardiovalve
+    - AltaValve
+    - Tiara
+    - TriClip
+    - EVOQUE
+    - Tricento
+    - Trilogy
+    - LuX-Valve
+  industry_only: true
+  industry_sponsor_class: INDUSTRY
 
 sponsors:
   default: Other
@@ -83,6 +124,12 @@ forecast:
   min_segment_count: 5
   # Benchmark trials shorter than this are excluded as implausible.
   min_months: 3.0
+  # Benchmark trials must list at least this many sites.
+  min_benchmark_sites: 5
+  # Model used for forecast outputs: auto (lowest median backtest error), rate, regression, or naive.
+  model: auto
+  # Regression needs at least this many benchmark rows to fit.
+  min_regression_rows: 20
   # Active trials whose median forecast runs past this many months from start
   # are excluded. Almost always a large target with an incomplete site list.
   max_horizon_months: 240
@@ -107,6 +154,10 @@ forecast:
 backtest:
   holdout_fraction: 0.2
   random_seed: 42
+  # Below this many holdout trials the comparison is flagged as thin.
+  min_holdout_for_confidence: 20
+  # Extra splits (seeds 0 to n-1) used only to report how often each model wins.
+  sensitivity_seeds: 10
 
 paths:
   raw_dir: data/raw

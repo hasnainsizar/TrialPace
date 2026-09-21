@@ -8,6 +8,7 @@ from typing import Any, Iterable
 import pandas as pd
 
 from trialpace.models import TrialRecord
+from trialpace.scope import FilterStep
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS snapshots (
@@ -21,11 +22,13 @@ CREATE TABLE IF NOT EXISTS trials (
     nct_id TEXT NOT NULL,
     title TEXT,
     lead_sponsor_raw TEXT,
+    lead_sponsor_class TEXT,
     sponsor TEXT NOT NULL,
     overall_status TEXT,
     phase TEXT,
     conditions TEXT,
     interventions TEXT,
+    intervention_types TEXT,
     enrollment_count INTEGER,
     enrollment_type TEXT,
     start_date TEXT,
@@ -47,6 +50,19 @@ CREATE TABLE IF NOT EXISTS sites (
     country TEXT,
     location_status TEXT,
     PRIMARY KEY (snapshot_date, nct_id, site_index)
+);
+CREATE TABLE IF NOT EXISTS scope_exclusions (
+    snapshot_date TEXT NOT NULL,
+    nct_id TEXT NOT NULL,
+    reason TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS filter_log (
+    snapshot_date TEXT NOT NULL,
+    step_order INTEGER NOT NULL,
+    step TEXT NOT NULL,
+    removed INTEGER NOT NULL,
+    remaining INTEGER NOT NULL,
+    PRIMARY KEY (snapshot_date, step_order)
 );
 CREATE TABLE IF NOT EXISTS data_quality (
     snapshot_date TEXT NOT NULL,
@@ -89,7 +105,8 @@ CREATE TABLE IF NOT EXISTS forecasts (
     target_enrollment INTEGER NOT NULL,
     site_count INTEGER NOT NULL,
     start_date TEXT NOT NULL,
-    rate_source TEXT NOT NULL,
+    model TEXT NOT NULL,
+    basis TEXT NOT NULL,
     months_p25 REAL NOT NULL,
     months_median REAL NOT NULL,
     months_p75 REAL NOT NULL,
@@ -107,14 +124,32 @@ CREATE TABLE IF NOT EXISTS forecast_exclusions (
     nct_id TEXT NOT NULL,
     reason TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS horizon_checks (
+    snapshot_date TEXT NOT NULL,
+    model TEXT NOT NULL,
+    fitted INTEGER NOT NULL,
+    excluded_by_horizon INTEGER NOT NULL,
+    PRIMARY KEY (snapshot_date, model)
+);
 CREATE TABLE IF NOT EXISTS backtest_results (
     snapshot_date TEXT NOT NULL,
     metric TEXT NOT NULL,
     value REAL,
     PRIMARY KEY (snapshot_date, metric)
 );
+CREATE TABLE IF NOT EXISTS model_comparison (
+    snapshot_date TEXT NOT NULL,
+    model TEXT NOT NULL,
+    holdout_n INTEGER NOT NULL,
+    median_ape_pct REAL,
+    mape_pct REAL,
+    coverage_p25_p75_pct REAL,
+    selected INTEGER NOT NULL,
+    PRIMARY KEY (snapshot_date, model)
+);
 CREATE TABLE IF NOT EXISTS backtest_predictions (
     snapshot_date TEXT NOT NULL,
+    model TEXT NOT NULL,
     nct_id TEXT NOT NULL,
     valve_type TEXT NOT NULL,
     size_band TEXT NOT NULL,
@@ -124,13 +159,13 @@ CREATE TABLE IF NOT EXISTS backtest_predictions (
     pred_months_p75 REAL NOT NULL,
     abs_pct_error REAL NOT NULL,
     within_range INTEGER NOT NULL,
-    PRIMARY KEY (snapshot_date, nct_id)
+    PRIMARY KEY (snapshot_date, model, nct_id)
 );
 """
 
 SNAPSHOT_TABLES = [
-    "trials", "sites", "data_quality", "benchmarks", "segment_rates",
-    "forecasts", "forecast_exclusions", "backtest_results", "backtest_predictions",
+    "trials", "sites", "scope_exclusions", "filter_log", "data_quality", "benchmarks", "segment_rates",
+    "forecasts", "forecast_exclusions", "horizon_checks", "model_comparison", "backtest_results", "backtest_predictions",
 ]
 
 
@@ -145,7 +180,13 @@ def _iso(value: date | None) -> str | None:
     return value.isoformat() if value else None
 
 
-def replace_snapshot(conn: sqlite3.Connection, snapshot: date, records: Iterable[TrialRecord]) -> tuple[int, int, int]:
+def replace_snapshot(
+    conn: sqlite3.Connection,
+    snapshot: date,
+    records: Iterable[TrialRecord],
+    scope_exclusions: Iterable[tuple[str, str]] = (),
+    filter_log: Iterable[FilterStep] = (),
+) -> tuple[int, int, int]:
     """Replace one day's snapshot. Returns (trials, sites, issues) written."""
     day = snapshot.isoformat()
     records = list(records)
@@ -155,14 +196,19 @@ def replace_snapshot(conn: sqlite3.Connection, snapshot: date, records: Iterable
         conn.execute("DELETE FROM snapshots WHERE snapshot_date = ?", (day,))
         trial_rows = [
             (
-                day, r.nct_id, r.title, r.lead_sponsor_raw, r.sponsor, r.overall_status, r.phase,
-                r.conditions, r.interventions, r.enrollment_count, r.enrollment_type,
+                day, r.nct_id, r.title, r.lead_sponsor_raw, r.lead_sponsor_class, r.sponsor, r.overall_status, r.phase,
+                r.conditions, r.interventions, r.intervention_types, r.enrollment_count, r.enrollment_type,
                 _iso(r.start_date), _iso(r.primary_completion_date), r.primary_completion_type,
                 _iso(r.completion_date), _iso(r.last_update_date), r.valve_type, r.site_count,
             )
             for r in records
         ]
-        conn.executemany(f"INSERT INTO trials VALUES ({','.join('?' * 18)})", trial_rows)
+        conn.executemany(f"INSERT INTO trials VALUES ({','.join('?' * 20)})", trial_rows)
+        conn.executemany("INSERT INTO scope_exclusions VALUES (?,?,?)", [(day, n, reason) for n, reason in scope_exclusions])
+        conn.executemany(
+            "INSERT INTO filter_log VALUES (?,?,?,?,?)",
+            [(day, i, f.step, f.removed, f.remaining) for i, f in enumerate(filter_log)],
+        )
         site_rows = [
             (day, s.nct_id, s.site_index, s.facility, s.city, s.state, s.country, s.location_status)
             for r in records for s in r.sites

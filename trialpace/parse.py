@@ -49,6 +49,7 @@ def parse_study(study: dict[str, Any], config: dict[str, Any]) -> TrialRecord | 
 
     title = require(_get(protocol, "identificationModule", "briefTitle"), "title")
     sponsor_raw = require(_get(protocol, "sponsorCollaboratorsModule", "leadSponsor", "name"), "lead_sponsor")
+    sponsor_class = require(_get(protocol, "sponsorCollaboratorsModule", "leadSponsor", "class"), "lead_sponsor_class")
     status = require(_get(protocol, "statusModule", "overallStatus"), "overall_status")
     phases = require(_get(protocol, "designModule", "phases"), "phase")
     conditions = require(_get(protocol, "conditionsModule", "conditions"), "conditions")
@@ -71,6 +72,7 @@ def parse_study(study: dict[str, Any], config: dict[str, Any]) -> TrialRecord | 
         return parsed
 
     intervention_names = [item.get("name") for item in interventions_raw or [] if item.get("name")]
+    intervention_types = sorted({item.get("type") for item in interventions_raw or [] if item.get("type")})
     sites: list[SiteRecord] = []
     for index, loc in enumerate(locations_raw):
         for key in ("facility", "country"):
@@ -102,11 +104,13 @@ def parse_study(study: dict[str, Any], config: dict[str, Any]) -> TrialRecord | 
         nct_id=nct_id,
         title=title,
         lead_sponsor_raw=sponsor_raw,
+        lead_sponsor_class=sponsor_class,
         sponsor=normalize_sponsor(sponsor_raw, config["sponsors"]),
         overall_status=status,
         phase=SEPARATOR.join(phases) if phases else None,
         conditions=conditions_text,
         interventions=interventions_text,
+        intervention_types=SEPARATOR.join(intervention_types) if intervention_types else None,
         enrollment_count=enrollment_int,
         enrollment_type=enrollment_type,
         start_date=parse_dated(start_raw, "start_date"),
