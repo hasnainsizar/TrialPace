@@ -66,13 +66,13 @@ def test_build_forecasts_produces_range_and_label(config: dict) -> None:
     trials = pd.DataFrame(
         [
             {
-                "nct_id": "NCT9", "sponsor": "Abbott", "overall_status": "RECRUITING", "valve_type": "mitral",
+                "nct_id": "NCT9", "sponsor_group": "Abbott", "overall_status": "RECRUITING", "valve_type": "mitral",
                 "enrollment_count": 120, "site_count": 6, "start_date": pd.Timestamp("2024-01-01"),
                 "primary_completion_date": pd.Timestamp("2025-01-01"), "primary_completion_type": "ESTIMATED",
                 "last_update_date": pd.Timestamp("2024-06-01"), "is_stale": 1,
             },
             {
-                "nct_id": "NCT10", "sponsor": "Other", "overall_status": "RECRUITING", "valve_type": "aortic",
+                "nct_id": "NCT10", "sponsor_group": "Other", "overall_status": "RECRUITING", "valve_type": "aortic",
                 "enrollment_count": 50, "site_count": 0, "start_date": pd.Timestamp("2024-01-01"),
                 "primary_completion_date": pd.NaT, "primary_completion_type": None,
                 "last_update_date": pd.NaT, "is_stale": None,
@@ -96,7 +96,7 @@ def test_build_forecasts_excludes_trials_beyond_horizon(config: dict) -> None:
     trials = pd.DataFrame(
         [
             {
-                "nct_id": "NCT11", "sponsor": "Other", "overall_status": "RECRUITING", "valve_type": "aortic",
+                "nct_id": "NCT11", "sponsor_group": "Other", "overall_status": "RECRUITING", "valve_type": "aortic",
                 "enrollment_count": 3000, "site_count": 1, "start_date": pd.Timestamp("2024-01-01"),
                 "primary_completion_date": pd.NaT, "primary_completion_type": None,
                 "last_update_date": pd.NaT, "is_stale": None,
@@ -138,19 +138,19 @@ def test_build_forecasts_labels_trials_past_their_dates(config: dict) -> None:
     trials = pd.DataFrame(
         [
             {
-                "nct_id": "PAST_POSTED", "sponsor": "Other", "overall_status": "RECRUITING", "valve_type": "aortic",
+                "nct_id": "PAST_POSTED", "sponsor_group": "Other", "overall_status": "RECRUITING", "valve_type": "aortic",
                 "enrollment_count": 120, "site_count": 6, "start_date": pd.Timestamp("2026-01-01"),
                 "primary_completion_date": pd.Timestamp("2026-06-01"), "primary_completion_type": "ESTIMATED",
                 "last_update_date": pd.NaT, "is_stale": None,
             },
             {
-                "nct_id": "PAST_FORECAST", "sponsor": "Other", "overall_status": "RECRUITING", "valve_type": "aortic",
+                "nct_id": "PAST_FORECAST", "sponsor_group": "Other", "overall_status": "RECRUITING", "valve_type": "aortic",
                 "enrollment_count": 12, "site_count": 6, "start_date": pd.Timestamp("2024-01-01"),
                 "primary_completion_date": pd.Timestamp("2027-06-01"), "primary_completion_type": "ESTIMATED",
                 "last_update_date": pd.NaT, "is_stale": None,
             },
             {
-                "nct_id": "PAST_BOTH", "sponsor": "Other", "overall_status": "ACTIVE_NOT_RECRUITING", "valve_type": "aortic",
+                "nct_id": "PAST_BOTH", "sponsor_group": "Other", "overall_status": "ACTIVE_NOT_RECRUITING", "valve_type": "aortic",
                 "enrollment_count": 12, "site_count": 6, "start_date": pd.Timestamp("2020-01-01"),
                 "primary_completion_date": pd.Timestamp("2021-01-01"), "primary_completion_type": "ESTIMATED",
                 "last_update_date": pd.NaT, "is_stale": None,
@@ -165,3 +165,34 @@ def test_build_forecasts_labels_trials_past_their_dates(config: dict) -> None:
     medians = forecasts.set_index("nct_id")["date_median"]
     assert medians["PAST_FORECAST"] < pd.Timestamp(SNAPSHOT)
     assert medians["PAST_POSTED"] > pd.Timestamp(SNAPSHOT)
+
+
+def test_active_trial_with_actual_primary_completion_is_not_forecast(config: dict) -> None:
+    trials = pd.DataFrame(
+        [
+            {
+                "nct_id": "DONE", "sponsor_group": "Medtronic", "overall_status": "ACTIVE_NOT_RECRUITING", "valve_type": "aortic",
+                "enrollment_count": 300, "site_count": 20, "start_date": pd.Timestamp("2021-01-01"),
+                "primary_completion_date": pd.Timestamp("2024-01-01"), "primary_completion_type": "ACTUAL",
+                "last_update_date": pd.Timestamp("2026-01-01"), "is_stale": 0,
+            },
+            {
+                "nct_id": "LIVE", "sponsor_group": "Medtronic", "overall_status": "RECRUITING", "valve_type": "aortic",
+                "enrollment_count": 120, "site_count": 6, "start_date": pd.Timestamp("2026-01-01"),
+                "primary_completion_date": pd.Timestamp("2027-10-01"), "primary_completion_type": "ESTIMATED",
+                "last_update_date": pd.NaT, "is_stale": None,
+            },
+        ]
+    )
+    forecasts, exclusions = build_forecasts(trials, _rate_predictor(config), config["forecast"], SNAPSHOT)
+    assert exclusions.empty
+    by_id = forecasts.set_index("nct_id")
+    done = by_id.loc["DONE"]
+    assert done["status_label"] == "Primary completion reached"
+    assert done["model"] == "none"
+    assert pd.isna(done["date_median"]) and pd.isna(done["months_median"]) and pd.isna(done["gap_days"])
+    assert done["posted_primary_completion_date"] == pd.Timestamp("2024-01-01")
+    assert done["is_stale"] == 0
+    assert by_id.loc["LIVE", "status_label"] == "On track"
+    late_labels = {"At risk", "Likely late", "Past posted date", "Past forecast"}
+    assert not set(forecasts["status_label"]) & late_labels

@@ -16,6 +16,7 @@ from trialpace.db import read_table
 
 HEADER_FONT = Font(bold=True)
 STATUS_FILLS = {
+    "primary_completion_reached": "D0CECE",
     "past_posted_date": "F4B084",
     "past_forecast": "BDD7EE",
     "on_track": "C6EFCE",
@@ -72,12 +73,14 @@ def _append_block(ws: Worksheet, frame: pd.DataFrame, title: str, empty_message:
 
 
 def _with_sponsor_name(frame: pd.DataFrame, trials: pd.DataFrame) -> pd.DataFrame:
-    """Insert the original lead sponsor name right after the sponsor group column."""
-    if frame.empty or "sponsor" not in frame.columns or trials.empty:
+    """Insert the original lead sponsor name and mapping reason right after the sponsor group column."""
+    if frame.empty or "sponsor_group" not in frame.columns or trials.empty:
         return frame
-    names = trials.set_index("nct_id")["lead_sponsor_raw"]
+    lookup = trials.set_index("nct_id")
     out = frame.copy()
-    out.insert(list(out.columns).index("sponsor") + 1, "sponsor_name", out["nct_id"].map(names))
+    position = list(out.columns).index("sponsor_group") + 1
+    out.insert(position, "sponsor_name", out["nct_id"].map(lookup["lead_sponsor_raw"]))
+    out.insert(position + 1, "mapped_via", out["nct_id"].map(lookup["mapped_via"]))
     return out
 
 
@@ -86,7 +89,7 @@ def top_other_sponsors(trials: pd.DataFrame, sponsor_cfg: dict[str, Any], limit:
     columns = ["sponsor_name", "trials_in_scope"]
     if trials.empty:
         return pd.DataFrame(columns=columns)
-    other = trials[trials["sponsor"] == default]
+    other = trials[trials["sponsor_group"] == default]
     counts = other["lead_sponsor_raw"].fillna("(no sponsor name)").value_counts().head(limit)
     return pd.DataFrame({"sponsor_name": counts.index, "trials_in_scope": counts.values}, columns=columns)
 
@@ -118,15 +121,18 @@ def summary_frame(
         rows.append((f"Scope: {step.step}", f"removed {step.removed}, {step.remaining} remain") if step.removed or step.step != "parsed" else ("Trials parsed from the API", step.remaining))
     rows.append(("Trials in scope", len(trials)))
     if not trials.empty:
-        for sponsor, count in trials["sponsor"].value_counts().items():
-            rows.append((f"Trials: {sponsor}", int(count)))
-    rows.append(("Active trials with a forecast", len(forecasts)))
+        for group, count in trials["sponsor_group"].value_counts().items():
+            rows.append((f"Trials: {group}", int(count)))
+    rows.append(("Active trials", len(forecasts)))
     if not forecasts.empty:
-        rows.append(("Forecast model", str(forecasts["model"].iloc[0])))
+        finished = str(labels.get("primary_completion_reached", ""))
+        rows.append(("Active trials with a forecast", int((forecasts["status_label"] != finished).sum())))
+        models = forecasts.loc[forecasts["model"] != "none", "model"]
+        rows.append(("Forecast model", str(models.iloc[0]) if len(models) else "none"))
         counts = forecasts["status_label"].value_counts()
         for label in labels.values():
             rows.append((f"Forecast status: {label}", int(counts.get(label, 0))))
-        rows.append((f"Stale forecast trials (last update more than {stale_after_months:g} months before snapshot)", int(forecasts["is_stale"].fillna(0).sum())))
+        rows.append((f"Stale active trials (last update more than {stale_after_months:g} months before snapshot)", int(forecasts["is_stale"].fillna(0).sum())))
     rows.append(("Benchmark trials", len(benchmarks)))
     if not benchmarks.empty:
         rows.append(("Median rate per site per month", round(float(benchmarks["rate_per_site_month"].median()), 3)))
@@ -153,7 +159,7 @@ def export_excel(conn: sqlite3.Connection, snapshot: date, config: dict[str, Any
     labels: dict[str, str] = config["forecast"]["labels"]
 
     if not sites.empty and not trials.empty:
-        sites = sites.merge(trials[["nct_id", "sponsor", "lead_sponsor_raw", "overall_status", "valve_type"]], on="nct_id", how="left")
+        sites = sites.merge(trials[["nct_id", "sponsor_group", "lead_sponsor_raw", "mapped_via", "overall_status", "valve_type"]], on="nct_id", how="left")
         sites = sites.rename(columns={"lead_sponsor_raw": "sponsor_name"})
 
     wb = Workbook()
@@ -165,7 +171,7 @@ def export_excel(conn: sqlite3.Connection, snapshot: date, config: dict[str, Any
 
     ws = wb.create_sheet("Active Trials Forecast")
     forecast_view = _with_sponsor_name(forecasts.drop(columns=["snapshot_date"], errors="ignore"), trials)
-    _write_frame(ws, forecast_view, "No active trials could be forecast for this snapshot")
+    _write_frame(ws, forecast_view, "No active trials in this snapshot")
     _status_fill(ws, forecast_view, labels)
 
     ws = wb.create_sheet("Sites")

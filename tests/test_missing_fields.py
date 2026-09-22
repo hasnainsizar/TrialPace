@@ -19,7 +19,8 @@ def test_missing_fields_are_recorded_not_fatal(config: dict[str, Any], sample_st
     assert skipped == 1
     by_id = {r.nct_id: r for r in records}
     sparse = by_id["NCT00000003"]
-    assert sparse.sponsor == "Other"
+    assert sparse.sponsor_group == "Other"
+    assert sparse.mapped_via == "none"
     assert sparse.valve_type == "tricuspid"
     assert sparse.enrollment_count is None
     assert sparse.start_date is None

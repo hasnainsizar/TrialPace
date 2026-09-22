@@ -82,10 +82,10 @@ def load(config: Path = ConfigOption, snapshot_date: Optional[str] = DateOption)
     for step in filter_log[1:]:
         typer.echo(f"  Filter '{step.step}': removed {step.removed}, {step.remaining} remain")
     _warn_if_small("trial snapshot", trials)
-    frame = pd.DataFrame([{"sponsor": r.sponsor} for r in records])
+    frame = pd.DataFrame([{"sponsor_group": r.sponsor_group} for r in records])
     if not frame.empty:
-        for sponsor, count in frame["sponsor"].value_counts().items():
-            typer.echo(f"  {sponsor}: {count}")
+        for group, count in frame["sponsor_group"].value_counts().items():
+            typer.echo(f"  {group}: {count}")
 
 
 @app.command()
@@ -119,7 +119,9 @@ def forecast(config: Path = ConfigOption, snapshot_date: Optional[str] = DateOpt
     db.replace_rows(conn, "forecast_exclusions", day, exclusions)
     db.replace_rows(conn, "horizon_checks", day, horizon_checks)
 
-    typer.echo(f"Snapshot {day}: {len(benchmarks)} benchmark trials, {len(forecasts)} active trials forecast with the {model_name} model")
+    from_active = int(benchmarks["overall_status"].isin(cfg["forecast"]["active_statuses"]).sum()) if not benchmarks.empty else 0
+    finished = int((forecasts["status_label"] == cfg["forecast"]["labels"]["primary_completion_reached"]).sum()) if not forecasts.empty else 0
+    typer.echo(f"Snapshot {day}: {len(benchmarks)} benchmark trials ({from_active} of them active trials that reached primary completion), {len(forecasts)} active trials, {len(forecasts) - finished} forecast with the {model_name} model")
     if not fitted:
         typer.echo(f"  The {model_name} model could not be fitted on {len(benchmarks)} benchmark trials, so no forecasts were produced.")
     _warn_if_small("benchmark set", len(benchmarks), int(cfg["forecast"]["min_segment_count"]))
@@ -129,7 +131,7 @@ def forecast(config: Path = ConfigOption, snapshot_date: Optional[str] = DateOpt
         for label in cfg["forecast"]["labels"].values():
             typer.echo(f"  {label}: {int(counts.get(label, 0))}")
         stale = int(forecasts["is_stale"].fillna(0).sum())
-        typer.echo(f"  Stale: {stale} of {len(forecasts)} forecast trials last updated before {stale_cutoff(day, cfg['forecast'])} ({cfg['forecast']['stale_after_months']} months before the snapshot)")
+        typer.echo(f"  Stale: {stale} of {len(forecasts)} active trials last updated before {stale_cutoff(day, cfg['forecast'])} ({cfg['forecast']['stale_after_months']} months before the snapshot)")
     if len(exclusions):
         typer.echo(f"  {len(exclusions)} trials excluded (reasons stored in forecast_exclusions)")
     for row in horizon_checks.itertuples(index=False):

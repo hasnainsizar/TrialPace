@@ -4,9 +4,18 @@
 
 // ---------- fact_forecast ----------
 
-// Measure
+// Measure. Every active trial in the snapshot, including those that already
+// reached primary completion.
 Active Trials =
 COUNTROWS ( fact_forecast )
+
+// Measure. Active trials that still have a forecast, i.e. enrollment not yet finished.
+Forecast Trials =
+CALCULATE ( COUNTROWS ( fact_forecast ), fact_forecast[status_label] <> "Primary completion reached" )
+
+// Measure
+Primary Completion Reached =
+CALCULATE ( COUNTROWS ( fact_forecast ), fact_forecast[status_label] = "Primary completion reached" )
 
 // Measure
 Total Target Enrollment =
@@ -25,8 +34,20 @@ Trials On Track =
 CALCULATE ( COUNTROWS ( fact_forecast ), fact_forecast[status_label] = "On track" )
 
 // Measure
+Trials Past Forecast =
+CALCULATE ( COUNTROWS ( fact_forecast ), fact_forecast[status_label] = "Past forecast" )
+
+// Measure. Posted primary completion date already behind the snapshot date.
+Trials Past Posted Date =
+CALCULATE ( COUNTROWS ( fact_forecast ), fact_forecast[status_label] = "Past posted date" )
+
+// Measure
+Share Past Posted Date =
+DIVIDE ( [Trials Past Posted Date], [Forecast Trials] )
+
+// Measure
 Share Likely Late =
-DIVIDE ( [Trials Likely Late], [Active Trials] )
+DIVIDE ( [Trials Likely Late], [Forecast Trials] )
 
 // Measure. Positive means the median forecast lands after the posted date.
 Median Gap Days =
@@ -49,7 +70,7 @@ DIVIDE ( [Stale Active Trials], [Active Trials] )
 // so it can sit on the same axis as the forecast months.
 Posted Months From Start =
 IF (
-    ISBLANK ( fact_forecast[posted_primary_completion_date] ),
+    ISBLANK ( fact_forecast[posted_primary_completion_date] ) || ISBLANK ( fact_forecast[start_date] ),
     BLANK (),
     DATEDIFF ( fact_forecast[start_date], fact_forecast[posted_primary_completion_date], DAY ) / 30.4375
 )
@@ -115,4 +136,4 @@ CALCULATE ( COUNTROWS ( dim_trial ), dim_sponsor[is_edwards] = 1 )
 
 // Measure
 Competitor Trials =
-CALCULATE ( COUNTROWS ( dim_trial ), dim_sponsor[is_edwards] = 0, dim_sponsor[sponsor] <> "Other" )
+CALCULATE ( COUNTROWS ( dim_trial ), dim_sponsor[is_edwards] = 0, dim_sponsor[sponsor_group] <> "Other" )

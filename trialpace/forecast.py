@@ -40,7 +40,7 @@ def size_band(enrollment: int, bands: list[dict[str, Any]]) -> str:
 def build_benchmarks(trials: pd.DataFrame, forecast_cfg: dict[str, Any]) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Select benchmark trials and compute their rates. Returns (benchmarks, exclusions)."""
     columns = [
-        "nct_id", "sponsor", "valve_type", "size_band", "enrollment_count", "site_count",
+        "nct_id", "sponsor_group", "overall_status", "valve_type", "size_band", "enrollment_count", "site_count",
         "start_date", "primary_completion_date", "months", "rate_per_site_month",
     ]
     if trials.empty:
@@ -49,7 +49,7 @@ def build_benchmarks(trials: pd.DataFrame, forecast_cfg: dict[str, Any]) -> tupl
     days_per_month = float(forecast_cfg["days_per_month"])
     min_months = float(forecast_cfg["min_months"])
     min_sites = int(forecast_cfg["min_benchmark_sites"])
-    candidates = trials[trials["overall_status"].isin(forecast_cfg["benchmark_statuses"])]
+    candidates = trials[benchmark_candidate_mask(trials, forecast_cfg)]
     rows: list[dict[str, Any]] = []
     exclusions: list[dict[str, Any]] = []
     for row in candidates.itertuples(index=False):
@@ -63,7 +63,8 @@ def build_benchmarks(trials: pd.DataFrame, forecast_cfg: dict[str, Any]) -> tupl
         rows.append(
             {
                 "nct_id": row.nct_id,
-                "sponsor": row.sponsor,
+                "sponsor_group": row.sponsor_group,
+                "overall_status": row.overall_status,
                 "valve_type": row.valve_type,
                 "size_band": size_band(enrollment, forecast_cfg["size_bands"]),
                 "enrollment_count": enrollment,
@@ -75,6 +76,17 @@ def build_benchmarks(trials: pd.DataFrame, forecast_cfg: dict[str, Any]) -> tupl
             }
         )
     return pd.DataFrame(rows, columns=columns), pd.DataFrame(exclusions, columns=["nct_id", "reason"])
+
+
+def reached_primary_completion(trials: pd.DataFrame) -> pd.Series:
+    """Active trials whose primary completion date is ACTUAL have finished enrolling."""
+    return trials["primary_completion_type"] == "ACTUAL"
+
+
+def benchmark_candidate_mask(trials: pd.DataFrame, forecast_cfg: dict[str, Any]) -> pd.Series:
+    completed = trials["overall_status"].isin(forecast_cfg["benchmark_statuses"])
+    active_done = trials["overall_status"].isin(forecast_cfg["active_statuses"]) & reached_primary_completion(trials)
+    return completed | active_done
 
 
 def _benchmark_exclusion(row: Any, min_months: float, min_sites: int, days_per_month: float) -> str | None:
@@ -170,7 +182,7 @@ def label_status(gap_days: int | None, forecast_cfg: dict[str, Any]) -> str:
 
 
 FORECAST_COLUMNS = [
-    "nct_id", "sponsor", "overall_status", "valve_type", "size_band", "target_enrollment", "site_count",
+    "nct_id", "sponsor_group", "overall_status", "valve_type", "size_band", "target_enrollment", "site_count",
     "start_date", "model", "basis", "months_p25", "months_median", "months_p75",
     "date_p25", "date_median", "date_p75", "posted_primary_completion_date",
     "posted_primary_completion_type", "gap_days", "status_label", "last_update_posted", "is_stale",
@@ -194,7 +206,11 @@ def build_forecasts(
     active = trials[trials["overall_status"].isin(forecast_cfg["active_statuses"])]
     rows: list[dict[str, Any]] = []
     exclusions: list[dict[str, Any]] = []
+    labels = forecast_cfg["labels"]
     for row in active.itertuples(index=False):
+        if row.primary_completion_type == "ACTUAL":
+            rows.append(_completed_row(row, str(labels["primary_completion_reached"])))
+            continue
         if pd.isna(row.enrollment_count) or int(row.enrollment_count) <= 0:
             exclusions.append({"nct_id": row.nct_id, "reason": "target enrollment missing or zero"})
             continue
@@ -219,7 +235,7 @@ def build_forecasts(
         rows.append(
             {
                 "nct_id": row.nct_id,
-                "sponsor": row.sponsor,
+                "sponsor_group": row.sponsor_group,
                 "overall_status": row.overall_status,
                 "valve_type": row.valve_type,
                 "size_band": band,
@@ -243,3 +259,32 @@ def build_forecasts(
             }
         )
     return pd.DataFrame(rows, columns=FORECAST_COLUMNS), pd.DataFrame(exclusions, columns=["nct_id", "reason"])
+
+
+def _completed_row(row: Any, label: str) -> dict[str, Any]:
+    """A forecast-table row for an active trial that already reached primary completion."""
+    posted = None if pd.isna(row.primary_completion_date) else row.primary_completion_date
+    return {
+        "nct_id": row.nct_id,
+        "sponsor_group": row.sponsor_group,
+        "overall_status": row.overall_status,
+        "valve_type": row.valve_type,
+        "size_band": None,
+        "target_enrollment": None if pd.isna(row.enrollment_count) else int(row.enrollment_count),
+        "site_count": int(row.site_count),
+        "start_date": row.start_date,
+        "model": "none",
+        "basis": "primary completion date is ACTUAL; enrollment finished",
+        "months_p25": None,
+        "months_median": None,
+        "months_p75": None,
+        "date_p25": pd.NaT,
+        "date_median": pd.NaT,
+        "date_p75": pd.NaT,
+        "posted_primary_completion_date": posted if posted is not None else pd.NaT,
+        "posted_primary_completion_type": row.primary_completion_type,
+        "gap_days": None,
+        "status_label": label,
+        "last_update_posted": row.last_update_date,
+        "is_stale": None if pd.isna(row.is_stale) else int(row.is_stale),
+    }

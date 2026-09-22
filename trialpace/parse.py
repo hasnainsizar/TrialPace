@@ -94,6 +94,7 @@ def parse_study(study: dict[str, Any], config: dict[str, Any]) -> TrialRecord | 
     interventions_text = SEPARATOR.join(intervention_names) if intervention_names else None
     valve_text = " ".join(filter(None, [title, conditions_text, interventions_text]))
 
+    sponsor_group, mapped_via = normalize_sponsor(sponsor_raw, config["sponsors"])
     try:
         enrollment_int = int(enrollment_count) if enrollment_count is not None else None
     except (TypeError, ValueError):
@@ -105,7 +106,8 @@ def parse_study(study: dict[str, Any], config: dict[str, Any]) -> TrialRecord | 
         title=title,
         lead_sponsor_raw=sponsor_raw,
         lead_sponsor_class=sponsor_class,
-        sponsor=normalize_sponsor(sponsor_raw, config["sponsors"]),
+        sponsor_group=sponsor_group,
+        mapped_via=mapped_via,
         overall_status=status,
         phase=SEPARATOR.join(phases) if phases else None,
         conditions=conditions_text,

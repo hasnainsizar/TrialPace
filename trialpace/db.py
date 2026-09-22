@@ -23,7 +23,8 @@ CREATE TABLE IF NOT EXISTS trials (
     title TEXT,
     lead_sponsor_raw TEXT,
     lead_sponsor_class TEXT,
-    sponsor TEXT NOT NULL,
+    sponsor_group TEXT NOT NULL,
+    mapped_via TEXT NOT NULL,
     overall_status TEXT,
     phase TEXT,
     conditions TEXT,
@@ -74,7 +75,8 @@ CREATE TABLE IF NOT EXISTS data_quality (
 CREATE TABLE IF NOT EXISTS benchmarks (
     snapshot_date TEXT NOT NULL,
     nct_id TEXT NOT NULL,
-    sponsor TEXT NOT NULL,
+    sponsor_group TEXT NOT NULL,
+    overall_status TEXT,
     valve_type TEXT NOT NULL,
     size_band TEXT NOT NULL,
     enrollment_count INTEGER NOT NULL,
@@ -99,21 +101,21 @@ CREATE TABLE IF NOT EXISTS segment_rates (
 CREATE TABLE IF NOT EXISTS forecasts (
     snapshot_date TEXT NOT NULL,
     nct_id TEXT NOT NULL,
-    sponsor TEXT NOT NULL,
+    sponsor_group TEXT NOT NULL,
     overall_status TEXT,
     valve_type TEXT NOT NULL,
-    size_band TEXT NOT NULL,
-    target_enrollment INTEGER NOT NULL,
+    size_band TEXT,
+    target_enrollment INTEGER,
     site_count INTEGER NOT NULL,
-    start_date TEXT NOT NULL,
+    start_date TEXT,
     model TEXT NOT NULL,
     basis TEXT NOT NULL,
-    months_p25 REAL NOT NULL,
-    months_median REAL NOT NULL,
-    months_p75 REAL NOT NULL,
-    date_p25 TEXT NOT NULL,
-    date_median TEXT NOT NULL,
-    date_p75 TEXT NOT NULL,
+    months_p25 REAL,
+    months_median REAL,
+    months_p75 REAL,
+    date_p25 TEXT,
+    date_median TEXT,
+    date_p75 TEXT,
     posted_primary_completion_date TEXT,
     posted_primary_completion_type TEXT,
     gap_days INTEGER,
@@ -199,14 +201,14 @@ def replace_snapshot(
         conn.execute("DELETE FROM snapshots WHERE snapshot_date = ?", (day,))
         trial_rows = [
             (
-                day, r.nct_id, r.title, r.lead_sponsor_raw, r.lead_sponsor_class, r.sponsor, r.overall_status, r.phase,
+                day, r.nct_id, r.title, r.lead_sponsor_raw, r.lead_sponsor_class, r.sponsor_group, r.mapped_via, r.overall_status, r.phase,
                 r.conditions, r.interventions, r.intervention_types, r.enrollment_count, r.enrollment_type,
                 _iso(r.start_date), _iso(r.primary_completion_date), r.primary_completion_type,
                 _iso(r.completion_date), _iso(r.last_update_date), r.valve_type, r.site_count, r.is_stale,
             )
             for r in records
         ]
-        conn.executemany(f"INSERT INTO trials VALUES ({','.join('?' * 21)})", trial_rows)
+        conn.executemany(f"INSERT INTO trials VALUES ({','.join('?' * 22)})", trial_rows)
         conn.executemany("INSERT INTO scope_exclusions VALUES (?,?,?)", [(day, n, reason) for n, reason in scope_exclusions])
         conn.executemany(
             "INSERT INTO filter_log VALUES (?,?,?,?,?)",

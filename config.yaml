@@ -86,9 +86,9 @@ scope:
 
 sponsors:
   default: Other
-  # Case-insensitive substring match against the lead sponsor name.
-  # First match wins, in the order listed.
-  mapping:
+  # Direct: the lead sponsor name starts with one of these (case-insensitive).
+  # mapped_via is "direct" for these.
+  direct:
     Edwards Lifesciences:
       - edwards
     Medtronic:
@@ -97,8 +97,22 @@ sponsors:
       - boston scientific
     Abbott:
       - abbott
-      - st. jude
-      - st jude
+  # Parent map: checked after direct, matching the pattern anywhere in the name.
+  # mapped_via records why the name belongs to the group.
+  parent_map:
+    - pattern: Edwards Lifesciences
+      group: Edwards Lifesciences
+      mapped_via: affiliate
+    - pattern: Symetis SA
+      group: Boston Scientific
+      mapped_via: acquisition
+      note: acquired by Boston Scientific in 2017
+    - pattern: St. Jude
+      group: Abbott
+      mapped_via: acquisition
+      note: acquired by Abbott in 2017
+  # mapped_via for names that fall into the default group.
+  unmapped_via: none
 
 valve_types:
   default: other
@@ -147,8 +161,9 @@ forecast:
   status_thresholds:
     on_track_max_days: 90
     at_risk_max_days: 365
-  # Label priority: past_posted_date, then past_forecast, then no_posted_date, then the gap thresholds.
+  # Label priority: primary_completion_reached, past_posted_date, past_forecast, no_posted_date, then the gap thresholds.
   labels:
+    primary_completion_reached: Primary completion reached
     past_posted_date: Past posted date
     past_forecast: Past forecast
     on_track: On track

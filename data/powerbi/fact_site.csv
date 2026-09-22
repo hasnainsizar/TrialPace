@@ -246,15 +246,15 @@ snapshot_date,nct_id,site_index,facility,city,state,country,location_status,spon
 2026-09-21,NCT02687035,53,University of Washington,Seattle,Washington,United States,,1,1
 2026-09-21,NCT02687035,54,University of Wisconsin,Madison,Wisconsin,United States,,1,1
 2026-09-21,NCT02687035,55,"St. Paul's Hospital, Providence Health Care",Vancouver,British Columbia,Canada,,1,1
-2026-09-21,NCT02909556,0,Rigshospitalet,Copenhagen,,Denmark,,5,1
-2026-09-21,NCT02909556,1,Kerckhoff-Klinik Forschungsgesellschaft mbH,Bad Nauheim,,Germany,,5,1
-2026-09-21,NCT02909556,2,Johannes Hospital,Dortmund,,Germany,,5,1
-2026-09-21,NCT02909556,3,Universitätsklinikum Halle - Universitätsklinik und Poliklinik für Herzchirurgie,Halle,,Germany,,5,1
-2026-09-21,NCT02909556,4,Universitäres Herzzentrum Hamburg - Klinik und Poliklinik für Herz- und Gefäßchirurgie,Hamburg,,Germany,,5,1
-2026-09-21,NCT02909556,5,Herzzentrum Leipzig GmbH,Leipzig,,Germany,,5,1
-2026-09-21,NCT02909556,6,Deutsches Herzzentrum München,München,,Germany,,5,1
-2026-09-21,NCT02909556,7,Universitätsklinik Regensburg,Regensburg,,Germany,,5,1
-2026-09-21,NCT02909556,8,Luzerner Kantonsspital,Lucerne,,Switzerland,,5,1
+2026-09-21,NCT02909556,0,Rigshospitalet,Copenhagen,,Denmark,,3,1
+2026-09-21,NCT02909556,1,Kerckhoff-Klinik Forschungsgesellschaft mbH,Bad Nauheim,,Germany,,3,1
+2026-09-21,NCT02909556,2,Johannes Hospital,Dortmund,,Germany,,3,1
+2026-09-21,NCT02909556,3,Universitätsklinikum Halle - Universitätsklinik und Poliklinik für Herzchirurgie,Halle,,Germany,,3,1
+2026-09-21,NCT02909556,4,Universitäres Herzzentrum Hamburg - Klinik und Poliklinik für Herz- und Gefäßchirurgie,Hamburg,,Germany,,3,1
+2026-09-21,NCT02909556,5,Herzzentrum Leipzig GmbH,Leipzig,,Germany,,3,1
+2026-09-21,NCT02909556,6,Deutsches Herzzentrum München,München,,Germany,,3,1
+2026-09-21,NCT02909556,7,Universitätsklinik Regensburg,Regensburg,,Germany,,3,1
+2026-09-21,NCT02909556,8,Luzerner Kantonsspital,Lucerne,,Switzerland,,3,1
 2026-09-21,NCT04704258,0,"HartCentrum, Ziekenhuis Netwerk Antwerpen (ZNA) Middelheim",Antwerp,,Belgium,,5,1
 2026-09-21,NCT04704258,1,CUB Hôpital Erasme (ULB),Brussels,,Belgium,,5,1
 2026-09-21,NCT04704258,2,Casa di Cura Policlinico di Monza,Monza,MB,Italy,,5,1
@@ -399,13 +399,13 @@ snapshot_date,nct_id,site_index,facility,city,state,country,location_status,spon
 2026-09-21,NCT02744677,25,University of Virginia (UVA),Charlottesville,Virginia,United States,RECRUITING,1,1
 2026-09-21,NCT02744677,26,University of Washington/Seattle Children's Hospital,Seattle,Washington,United States,COMPLETED,1,1
 2026-09-21,NCT06368037,0,Northern Theater Command General Hospital of the Chinese People's Liberation Army,Shenyang,,China,,5,1
-2026-09-21,NCT02950428,0,Kerckhoff-Klinik,Bad Nauheim,,Germany,,5,1
-2026-09-21,NCT02950428,1,Krankenhausbetriebsgesellschaft,Bad Oeynhausen,,Germany,,5,1
-2026-09-21,NCT02950428,2,Deutsched Herzzentrum Berlin,Berlin,,Germany,,5,1
-2026-09-21,NCT02950428,3,Martin Luther University Halle Winttenberg,Halle,,Germany,,5,1
-2026-09-21,NCT02950428,4,Universitätklinikum Hamburg Eppendorf,Hamburg,,Germany,,5,1
-2026-09-21,NCT02950428,5,Herzentrum Leipzig GmbH,Leipzig,,Germany,,5,1
-2026-09-21,NCT02950428,6,University Hospital Regensburg,Regensburg,,Germany,,5,1
+2026-09-21,NCT02950428,0,Kerckhoff-Klinik,Bad Nauheim,,Germany,,3,1
+2026-09-21,NCT02950428,1,Krankenhausbetriebsgesellschaft,Bad Oeynhausen,,Germany,,3,1
+2026-09-21,NCT02950428,2,Deutsched Herzzentrum Berlin,Berlin,,Germany,,3,1
+2026-09-21,NCT02950428,3,Martin Luther University Halle Winttenberg,Halle,,Germany,,3,1
+2026-09-21,NCT02950428,4,Universitätklinikum Hamburg Eppendorf,Hamburg,,Germany,,3,1
+2026-09-21,NCT02950428,5,Herzentrum Leipzig GmbH,Leipzig,,Germany,,3,1
+2026-09-21,NCT02950428,6,University Hospital Regensburg,Regensburg,,Germany,,3,1
 2026-09-21,NCT07194265,0,Rigshospitalet,Copenhagen,Capital Region of Denmark,Denmark,RECRUITING,5,1
 2026-09-21,NCT04788888,0,Fiona Stanley Hospital,Murdoch,Murdoch,Australia,,4,1
 2026-09-21,NCT04788888,1,Prince of Wales Hospital,Sydney,Sydney,Australia,,4,1
@@ -676,11 +676,11 @@ snapshot_date,nct_id,site_index,facility,city,state,country,location_status,spon
 2026-09-21,NCT03056573,7,Medical Center Leeuwarden,Leeuwarden,,Netherlands,,4,1
 2026-09-21,NCT03056573,8,UMC St Radboud,Nijmegen,,Netherlands,,4,1
 2026-09-21,NCT03056573,9,Basel University Hospital,Basel,,Switzerland,,4,1
-2026-09-21,NCT03143673,0,Kerckhoff Klinik GmbH,Bad Nauheim,,Germany,,5,1
-2026-09-21,NCT03143673,1,Universitätsklinikum Hamburg-Eppendorf Klinik für Herz-und Gefässchirurgie,Essen,,Germany,,5,1
-2026-09-21,NCT03143673,2,Universitätsklinikum Essen Westdeutsches Herzzentrum Essen,Essen,,Germany,,5,1
-2026-09-21,NCT03143673,3,Klinik für Herzchirurgie GmbH,Karlsruhe,,Germany,,5,1
-2026-09-21,NCT03143673,4,Herzzentrum Leipzig GmbH,Leipzig,,Germany,,5,1
+2026-09-21,NCT03143673,0,Kerckhoff Klinik GmbH,Bad Nauheim,,Germany,,3,1
+2026-09-21,NCT03143673,1,Universitätsklinikum Hamburg-Eppendorf Klinik für Herz-und Gefässchirurgie,Essen,,Germany,,3,1
+2026-09-21,NCT03143673,2,Universitätsklinikum Essen Westdeutsches Herzzentrum Essen,Essen,,Germany,,3,1
+2026-09-21,NCT03143673,3,Klinik für Herzchirurgie GmbH,Karlsruhe,,Germany,,3,1
+2026-09-21,NCT03143673,4,Herzzentrum Leipzig GmbH,Leipzig,,Germany,,3,1
 2026-09-21,NCT01419015,0,Kokura Memorial Hospital,Kitakyushu,Fukuoka,Japan,,1,1
 2026-09-21,NCT01419015,1,Kurashiki Central Hospital,Kurashiki,Okayama-ken,Japan,,1,1
 2026-09-21,NCT01419015,2,Osaka University Hospital,Suita,Osaka,Japan,,1,1
@@ -1768,11 +1768,11 @@ snapshot_date,nct_id,site_index,facility,city,state,country,location_status,spon
 2026-09-21,NCT04414878,1,Zhongshan Hospital,Shanghai,Shanghai Municipality,China,RECRUITING,5,1
 2026-09-21,NCT04414878,2,West China Hospital of Sichuan University,Chengdu,Sichuan,China,RECRUITING,5,1
 2026-09-21,NCT04414878,3,The Second Affiliated Hospital Zhejiang University School of Medicine,Hangzhou,Zhejiang,China,RECRUITING,5,1
-2026-09-21,NCT03752996,0,Instituto Dante Pazzanese de Cardiologia,São Paulo,,Brazil,,5,1
-2026-09-21,NCT03752996,1,Kerckhoff Klinik GmbH,Bad Nauheim,,Germany,,5,1
-2026-09-21,NCT03752996,2,Universitätsklinikum Bonn,Bonn,,Germany,,5,1
-2026-09-21,NCT03752996,3,Herzzentrum Universitätsklinikum Köln,Cologne,,Germany,,5,1
-2026-09-21,NCT03752996,4,Universitäres Herzzentrum Hamburg,Hamburg,,Germany,,5,1
+2026-09-21,NCT03752996,0,Instituto Dante Pazzanese de Cardiologia,São Paulo,,Brazil,,3,1
+2026-09-21,NCT03752996,1,Kerckhoff Klinik GmbH,Bad Nauheim,,Germany,,3,1
+2026-09-21,NCT03752996,2,Universitätsklinikum Bonn,Bonn,,Germany,,3,1
+2026-09-21,NCT03752996,3,Herzzentrum Universitätsklinikum Köln,Cologne,,Germany,,3,1
+2026-09-21,NCT03752996,4,Universitäres Herzzentrum Hamburg,Hamburg,,Germany,,3,1
 2026-09-21,NCT06211595,0,"The Second Xiangya Hospital, Central South University",Changsha,Hunan,China,,5,1
 2026-09-21,NCT02838680,0,Sunnybrook Health Sciences Center,Toronto,Ontario,Canada,,5,1
 2026-09-21,NCT02838680,1,Institut Universitaire de Cardiologie et de Pneumologie de Québec - Université Laval,Québec,Quebec,Canada,,5,1
@@ -1868,12 +1868,12 @@ snapshot_date,nct_id,site_index,facility,city,state,country,location_status,spon
 2026-09-21,NCT02000115,67,Royal Adelaide Hospital,Adelaide,South Australia,Australia,,4,1
 2026-09-21,NCT02000115,68,The Alfred Hospital,Melbourne,Victoria,Australia,,4,1
 2026-09-21,NCT02000115,69,Fiona Stanley Hospital,Murdoch,Western Australia,Australia,,4,1
-2026-09-21,NCT03003650,0,Instituto Dante Pazzanese de Cardiologia,São Paulo,,Brazil,,5,1
-2026-09-21,NCT03003650,1,Kerckhoff Klinik GmbH,Bad Nauheim,,Germany,,5,1
-2026-09-21,NCT03003650,2,Universitätsklinikum Bonn,Bonn,,Germany,,5,1
-2026-09-21,NCT03003650,3,Herzzentrum Universitätsklinikum Köln,Cologne,,Germany,,5,1
-2026-09-21,NCT03003650,4,Universitäres Herzzentrum Hamburg,Hamburg,,Germany,,5,1
-2026-09-21,NCT03003650,5,Osaka University Hospital,Osaka,,Japan,,5,1
+2026-09-21,NCT03003650,0,Instituto Dante Pazzanese de Cardiologia,São Paulo,,Brazil,,3,1
+2026-09-21,NCT03003650,1,Kerckhoff Klinik GmbH,Bad Nauheim,,Germany,,3,1
+2026-09-21,NCT03003650,2,Universitätsklinikum Bonn,Bonn,,Germany,,3,1
+2026-09-21,NCT03003650,3,Herzzentrum Universitätsklinikum Köln,Cologne,,Germany,,3,1
+2026-09-21,NCT03003650,4,Universitäres Herzzentrum Hamburg,Hamburg,,Germany,,3,1
+2026-09-21,NCT03003650,5,Osaka University Hospital,Osaka,,Japan,,3,1
 2026-09-21,NCT04076150,0,"John Paul II Hospital, Dept. of Interventional Cardiology",Krakow,,Poland,RECRUITING,5,1
 2026-09-21,NCT05909748,0,Rabin Medical Center,Petah Tikva,,Israel,RECRUITING,5,1
 2026-09-21,NCT05909748,1,Tel Aviv Sourasly Medical Center,Tel Aviv,,Israel,NOT_YET_RECRUITING,5,1
@@ -2074,8 +2074,8 @@ snapshot_date,nct_id,site_index,facility,city,state,country,location_status,spon
 2026-09-21,NCT06689839,9,Monash Health Public,Clayton,Victoria,Australia,RECRUITING,5,1
 2026-09-21,NCT02903420,0,Osaka University Hospital,Suita,Osaka,Japan,,1,1
 2026-09-21,NCT02903420,1,Keio University Hospital,Shinjuku-Ku,Tokyo,Japan,,1,1
-2026-09-21,NCT02986737,0,Kerckhoff-Klinik,Bad Nauheim,,Germany,,5,1
-2026-09-21,NCT02986737,1,Klinik für Herz-und Gefäßchirurgie,Hamburg,,Germany,,5,1
+2026-09-21,NCT02986737,0,Kerckhoff-Klinik,Bad Nauheim,,Germany,,3,1
+2026-09-21,NCT02986737,1,Klinik für Herz-und Gefäßchirurgie,Hamburg,,Germany,,3,1
 2026-09-21,NCT06962371,0,Victorian Heart Hospital,Clayton,Victoria,Australia,RECRUITING,5,1
 2026-09-21,NCT02701283,0,Abrazo Arizona Heart Hospital,Phoenix,Arizona,United States,,2,1
 2026-09-21,NCT02701283,1,Scripps Memorial Hospital La Jolla,La Jolla,California,United States,,2,1

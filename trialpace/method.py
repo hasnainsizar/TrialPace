@@ -35,13 +35,15 @@ def _filter_table(filter_log: pd.DataFrame) -> str:
     return "\n".join(lines)
 
 
-def _benchmark_table(exclusions: pd.DataFrame, benchmark_count: int) -> str:
+def _benchmark_table(exclusions: pd.DataFrame, benchmarks: pd.DataFrame, active_statuses: list[str]) -> str:
     bench = exclusions[exclusions["reason"].str.startswith("benchmark: ")] if not exclusions.empty else exclusions
     lines = ["| Reason | Trials removed |", "|---|---|"]
     if not bench.empty:
         for reason, count in bench["reason"].str.replace("benchmark: ", "", regex=False).value_counts().items():
             lines.append(f"| {reason} | {count} |")
-    lines.append(f"| Kept as benchmarks | {benchmark_count} |")
+    from_active = int(benchmarks["overall_status"].isin(active_statuses).sum()) if not benchmarks.empty and "overall_status" in benchmarks.columns else 0
+    lines.append(f"| Kept as benchmarks | {len(benchmarks)} |")
+    lines.append(f"| Of which active trials that reached primary completion | {from_active} |")
     return "\n".join(lines)
 
 
@@ -103,6 +105,7 @@ def _choice_text(comparison: pd.DataFrame, forecast_cfg: dict[str, Any]) -> str:
 
 
 LABEL_MEANINGS = {
+    "primary_completion_reached": "The trial is still listed as active but its primary completion date is marked ACTUAL, so enrollment has finished. No forecast is made and the trial is kept out of the late and at-risk counts. If it meets the benchmark rules it joins the benchmark set.",
     "past_posted_date": "The sponsor's posted primary completion date is already behind the snapshot date, yet the trial is still listed as active. Either the record is out of date or the trial has slipped past its own plan.",
     "past_forecast": "The model's median estimate is already behind the snapshot date but the trial is still active. The estimate has passed, so the trial is running slower than comparable completed trials.",
     "on_track": "The median forecast lands no more than {on_track_days} days after the posted date, or earlier.",
@@ -158,7 +161,7 @@ def render_method(config: dict[str, Any], context: dict[str, Any], snapshot: dat
         stale_text = "No forecast trials were available to check for stale records."
     else:
         stale_count = int(forecasts["is_stale"].fillna(0).sum())
-        stale_text = f"In this snapshot {stale_count} of {len(forecasts)} forecast trials are stale."
+        stale_text = f"In this snapshot {stale_count} of {len(forecasts)} active trials are stale."
     template = TEMPLATE_PATH.read_text(encoding="utf-8")
     rendered = template.format(
         stale_after_months=forecast_cfg["stale_after_months"],
@@ -166,7 +169,7 @@ def render_method(config: dict[str, Any], context: dict[str, Any], snapshot: dat
         labels_table=_labels_table(forecasts, forecast_cfg),
         snapshot=snapshot.isoformat(),
         filter_table=_filter_table(context["filter_log"]),
-        benchmark_table=_benchmark_table(exclusions, len(benchmarks)),
+        benchmark_table=_benchmark_table(exclusions, benchmarks, list(forecast_cfg["active_statuses"])),
         min_benchmark_sites=forecast_cfg["min_benchmark_sites"],
         min_segment_count=forecast_cfg["min_segment_count"],
         min_months=forecast_cfg["min_months"],

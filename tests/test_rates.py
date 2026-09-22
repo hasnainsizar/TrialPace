@@ -32,7 +32,7 @@ def test_size_band_boundaries(config: dict) -> None:
 def _trial(nct_id: str, **overrides: object) -> dict[str, object]:
     base: dict[str, object] = {
         "nct_id": nct_id,
-        "sponsor": "Other",
+        "sponsor_group": "Other",
         "valve_type": "aortic",
         "overall_status": "COMPLETED",
         "enrollment_count": 240,
@@ -55,10 +55,12 @@ def test_build_benchmarks_excludes_zero_sites_and_zero_months(config: dict) -> N
             _trial("NCT3", primary_completion_date=pd.Timestamp("2015-01-01")),
             _trial("NCT4", enrollment_type="ESTIMATED"),
             _trial("NCT5", overall_status="RECRUITING"),
+            _trial("NCT7", overall_status="RECRUITING", primary_completion_type="ESTIMATED"),
         ]
     )
     benchmarks, exclusions = build_benchmarks(trials, config["forecast"])
-    assert list(benchmarks["nct_id"]) == ["NCT1"]
+    assert list(benchmarks["nct_id"]) == ["NCT1", "NCT5"]
+    assert benchmarks.set_index("nct_id").loc["NCT5", "overall_status"] == "RECRUITING"
     assert benchmarks.iloc[0]["rate_per_site_month"] == pytest.approx(240 / 5 / (731 / 30.4375))
     reasons = dict(zip(exclusions["nct_id"], exclusions["reason"]))
     assert reasons["NCT2"] == "no sites listed"
@@ -66,3 +68,4 @@ def test_build_benchmarks_excludes_zero_sites_and_zero_months(config: dict) -> N
     assert "months" in reasons["NCT3"]
     assert "ACTUAL" in reasons["NCT4"]
     assert "NCT5" not in reasons
+    assert "NCT7" not in reasons

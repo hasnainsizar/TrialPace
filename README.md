@@ -67,7 +67,8 @@ Completed trials with at least 5 listed sites form a benchmark set. Three simple
 
 Whichever model has the lowest median error across those predictions is used for the forecast outputs. Each active trial gets an early, median, and late date. The median date is compared to the sponsor's posted primary completion date, and the trial gets one of these labels:
 
-- **Past posted date.** The sponsor's own date has already gone by, but the trial is still listed as active. Checked first.
+- **Primary completion reached.** The trial is still listed as active but its primary completion date is marked actual, so enrollment has finished. No forecast is made. If it meets the benchmark rules it joins the benchmark set instead.
+- **Past posted date.** The sponsor's own date has already gone by, but the trial is still listed as active.
 - **Past forecast.** The model's median estimate has already gone by. The trial is slower than comparable completed trials.
 - **On track, At risk, Likely late.** How far the median forecast lands after the posted date, using the day thresholds in config.yaml.
 - **No posted date.** Nothing to compare against.
@@ -87,11 +88,11 @@ The search returned 1,444 unique trials. The scope filters removed 729 with no d
 | Other | 184 |
 | Total | 292 |
 
-Other is mostly smaller device makers, many of them in China and Europe.
+Other is mostly smaller device makers, many of them in China and Europe. Sponsor names are grouped into a parent company where the registry name is an affiliate or an acquired company, and every trial keeps its original sponsor name and the reason for the grouping in a `mapped_via` column.
 
-Forecasts were produced for 117 active trials. 67 are Past posted date: the sponsor's own primary completion date has gone by while the trial is still listed as active. Most of these are Active not recruiting trials in long follow-up whose records have not been updated. Another 25 are Past forecast, 20 On track, 5 At risk, and none Likely late. 39 of the 117 are flagged stale because their registry record was last updated more than 12 months before the snapshot, so their status and posted date may be out of date. The stale share is 43% in the Other group against 24% for Edwards and 25% for Abbott.
+Of 117 active trials, 31 have already reached primary completion and are not forecast. The remaining 86 break down as 36 Past posted date (the sponsor's own date has gone by while the trial is still listed as active), 22 Past forecast, 18 On track, 5 At risk, and 5 Likely late. 39 of the 117 are flagged stale because their registry record was last updated more than 12 months before the snapshot, so their status and posted date may be out of date. The stale share is 43% in the Other group against 24% for Edwards and 25% for Abbott.
 
-The benchmark set has 54 completed trials. Under leave-one-out cross-validation the log-linear regression had the lowest median error at 37%, against 42% for the naive valve-type median and 58% for the per-site rate, so the regression is used for the outputs. The margin over the naive baseline is modest. Completed aortic trials took a median of 21 months from start to primary completion, mitral trials 35 months, and tricuspid trials 27 months.
+The benchmark set has 74 trials: 54 completed plus 20 active trials whose primary completion date is already actual. Under leave-one-out cross-validation the log-linear regression had the lowest median error at 41%, against 43% for the naive valve-type median and 59% for the per-site rate, so the regression is used for the outputs. The margin over the naive baseline is small. Completed aortic trials took a median of 21 months from start to primary completion, mitral trials 35 months, and tricuspid trials 27 months.
 
 ## What this can't tell you
 
@@ -100,7 +101,7 @@ The benchmark set has 54 completed trials. Under leave-one-out cross-validation 
 - **Why a trial is slow.** Pauses, protocol amendments, competing trials, and supply issues do not show up in the registry.
 - **Anything about unregistered or non-public activity.** Company internal projections, site activation plans, and screening logs are not public.
 - **A precise date.** The honest output is the range. The median is a reference point for comparison against the posted date, not a prediction to plan around.
-- **Much beyond the typical duration.** With 54 benchmark trials, the best model is only a few points better than "trials of this valve type usually take about this long". Treat the trial-specific adjustment for target and site count as a nudge, not a projection.
+- **Much beyond the typical duration.** With 74 benchmark trials, the best model is only a few points better than "trials of this valve type usually take about this long". Treat the trial-specific adjustment for target and site count as a nudge, not a projection.
 - **Whether the sponsor's date is wrong.** A trial labelled Likely late is one whose posted date is more ambitious than the benchmark pace. Sponsors sometimes know things the registry does not.
 - **Whether a record is current.** The registry only shows what the sponsor last posted. Trials flagged stale have not been updated in over a year, so their status and posted date should be read with that in mind.
 

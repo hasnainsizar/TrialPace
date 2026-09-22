@@ -15,7 +15,20 @@ Choices made where the brief left room for interpretation, and why.
 - **Data quality records missing fields, not partial ones.** A field is flagged when it is absent, empty, or unparseable. Missing facility or country on individual sites is flagged per site.
 - **Studies with no NCT ID are skipped and counted.** There is no way to store or dedupe them.
 - **Valve type comes from keyword matching** on title, conditions, and interventions, with tricuspid checked before mitral before aortic so that a mitral trial mentioning prior TAVR is classed as mitral. Trials matching nothing are "other". The keywords live in config.yaml.
-- **St. Jude Medical maps to Abbott.** Abbott acquired St. Jude in 2017 and the older mitral and tricuspid trials still carry the St. Jude name. The original name is kept in `lead_sponsor_raw`.
+- **Sponsor grouping is two-stage.** Direct groups match when the lead sponsor name starts with a configured prefix (edwards, medtronic, boston scientific, abbott) and get `mapped_via = direct`. A parent map is then checked anywhere in the name for affiliates and acquisitions. Prefix matching for the direct stage stops the affiliate rule from being swallowed by the direct rule, since "JC Medical, Inc., an affiliate of Edwards Lifesciences LLC" contains "edwards" but does not start with it. Names matching nothing go to Other with `mapped_via = none`. The original name is kept in `lead_sponsor_raw` and exported as `sponsor_name`; the grouped name is `sponsor_group`.
+- **Names mapped in the 2026-09-21 snapshot:**
+
+  | Registry name | Sponsor group | Mapped via |
+  |---|---|---|
+  | Edwards Lifesciences | Edwards Lifesciences | direct |
+  | JC Medical, Inc., an affiliate of Edwards Lifesciences LLC | Edwards Lifesciences | affiliate |
+  | Medtronic Cardiovascular | Medtronic | direct |
+  | Medtronic Cardiac Rhythm and Heart Failure | Medtronic | direct |
+  | Boston Scientific Corporation | Boston Scientific | direct |
+  | Symetis SA | Boston Scientific | acquisition (2017) |
+  | Abbott Medical Devices | Abbott | direct |
+
+  The St. Jude Medical to Abbott rule (acquisition, 2017) is configured but matched no in-scope trial in this snapshot.
 
 ## Scope filters
 
@@ -52,7 +65,8 @@ Choices made where the brief left room for interpretation, and why.
 - **P25 date uses the P75 rate.** Faster rates give earlier dates, so the optimistic end of the date range comes from the fast end of the rate distribution.
 - **Status thresholds:** gap up to 90 days is On track, up to 365 days is At risk, beyond that Likely late. A negative gap (forecast earlier than posted) is On track.
 - **Past posted date is checked before anything else.** If the sponsor's posted date is already behind the snapshot date and the trial is still active, comparing a forecast to that date is meaningless. The label says the record or the plan is out of date. Past forecast is checked second: an active trial whose median estimate has already passed was previously labelled On track whenever its posted date was also late, which hid the fact that the model's estimate had failed. Both labels use strict "before the snapshot date", so a date equal to the snapshot is not past. Gap days are still stored for both.
-- **Active not recruiting trials are forecast** as the brief specified, even though most have finished enrolling. METHOD.md explains how to read them.
+- **Active trials with an ACTUAL primary completion date are not forecast.** The registry marks the date type ACTUAL once the milestone has happened, so enrollment is over regardless of the overall status still saying active. These trials get the label Primary completion reached, blank forecast columns, and `model = none`, and they never count as late or at risk. They stay in fact_forecast so the Active Trials count and the status matrix still show every active trial. Those meeting the benchmark rules join the benchmark set; the count that came from active statuses is reported in the CLI and METHOD.md.
+- **Active not recruiting trials with an ESTIMATED primary completion date are still forecast.** Most have probably finished enrolling too, but the registry does not say so, and the forecast then serves as a check on the posted date.
 
 ## Models and selection
 

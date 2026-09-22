@@ -20,7 +20,7 @@ def _benchmarks(n: int, seed: int = 0) -> pd.DataFrame:
     return pd.DataFrame(
         {
             "nct_id": [f"NCT{i:08d}" for i in range(n)],
-            "sponsor": "Other",
+            "sponsor_group": "Other",
             "valve_type": valve,
             "size_band": "medium",
             "enrollment_count": target,

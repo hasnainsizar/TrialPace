@@ -19,12 +19,14 @@ The API search is broad on purpose (any interventional trial since 2010 matching
 
 ## Benchmark set
 
-Completed trials in scope that report an ACTUAL enrollment count, a start date, an ACTUAL primary completion date, at least 5 listed sites, and a duration of at least 3.0 months.
+Trials in scope that report an ACTUAL enrollment count, a start date, an ACTUAL primary completion date, at least 5 listed sites, and a duration of at least 3.0 months. Candidates are completed trials plus active trials whose primary completion date is already ACTUAL, since those have finished enrolling even though the registry still lists them as active.
 
 | Reason | Trials removed |
 |---|---|
-| fewer than 5 sites listed | 27 |
-| Kept as benchmarks | 54 |
+| fewer than 5 sites listed | 33 |
+| enrollment type is not ACTUAL | 5 |
+| Kept as benchmarks | 74 |
+| Of which active trials that reached primary completion | 20 |
 
 ## Models
 
@@ -34,19 +36,20 @@ Three models are fitted on the benchmark set and compared by leave-one-out cross
 2. **Log-linear regression.** Ordinary least squares of log(months) on log(target enrollment), log(site count), and valve type indicators. The median forecast is the fitted value plus the median training residual; the P25 and P75 add the 25th and 75th percentile residuals. This lets duration scale with target and sites without assuming the two cancel exactly.
 3. **Naive baseline.** The P25, median, and P75 duration of completed trials with the same valve type, ignoring target and sites. Valve types with fewer than 5 trials use the overall distribution.
 
-For every model, each duration is added to the trial's start date, and the result is always a range, never a single date. Trials whose median forecast runs past 240 months from start are excluded and listed with a reason. In this snapshot, after the scope and benchmark filters, the horizon cap excluded 0 under the naive baseline model, 20 under the per-site rate model, 0 under the log-linear regression model.
+For every model, each duration is added to the trial's start date, and the result is always a range, never a single date. Trials whose median forecast runs past 240 months from start are excluded and listed with a reason. In this snapshot, after the scope and benchmark filters, the horizon cap excluded 0 under the naive baseline model, 21 under the per-site rate model, 0 under the log-linear regression model.
 
-**Status label.** Two checks come first. If the sponsor's posted primary completion date is already behind the snapshot date, the trial is Past posted date. Otherwise, if the model's median date is already behind the snapshot date, the trial is Past forecast. Only then is the gap used: gap = median forecast date minus the posted date. Up to 90 days is On track, up to 365 days is At risk, beyond that is Likely late. A negative gap means the forecast is ahead of the posted date. Trials with no posted date get their own label.
+**Status label.** Active trials whose primary completion date is ACTUAL have finished enrolling: they get the label Primary completion reached, no forecast, and stay out of every late or at-risk count. For the rest, two checks come first. If the sponsor's posted primary completion date is already behind the snapshot date, the trial is Past posted date. Otherwise, if the model's median date is already behind the snapshot date, the trial is Past forecast. Only then is the gap used: gap = median forecast date minus the posted date. Up to 90 days is On track, up to 365 days is At risk, beyond that is Likely late. A negative gap means the forecast is ahead of the posted date. Trials with no posted date get their own label.
 
 ## Status labels in this snapshot
 
 | Label | Meaning | Trials |
 |---|---|---|
-| Past posted date | The sponsor's posted primary completion date is already behind the snapshot date, yet the trial is still listed as active. Either the record is out of date or the trial has slipped past its own plan. | 67 |
-| Past forecast | The model's median estimate is already behind the snapshot date but the trial is still active. The estimate has passed, so the trial is running slower than comparable completed trials. | 25 |
-| On track | The median forecast lands no more than 90 days after the posted date, or earlier. | 20 |
+| Primary completion reached | The trial is still listed as active but its primary completion date is marked ACTUAL, so enrollment has finished. No forecast is made and the trial is kept out of the late and at-risk counts. If it meets the benchmark rules it joins the benchmark set. | 31 |
+| Past posted date | The sponsor's posted primary completion date is already behind the snapshot date, yet the trial is still listed as active. Either the record is out of date or the trial has slipped past its own plan. | 36 |
+| Past forecast | The model's median estimate is already behind the snapshot date but the trial is still active. The estimate has passed, so the trial is running slower than comparable completed trials. | 22 |
+| On track | The median forecast lands no more than 90 days after the posted date, or earlier. | 18 |
 | At risk | The median forecast lands between 90 and 365 days after the posted date. | 5 |
-| Likely late | The median forecast lands more than 365 days after the posted date. | 0 |
+| Likely late | The median forecast lands more than 365 days after the posted date. | 5 |
 | No posted date | The registry has no primary completion date for the trial, so there is nothing to compare against. | 0 |
 
 ## Per-site rates in this snapshot
@@ -55,12 +58,12 @@ Patients per site per month, from the benchmark set.
 
 | Valve type | Size band | Trials | P25 | Median | P75 | Source |
 |---|---|---|---|---|---|---|
-| all | all | 54 | 0.206 | 0.466 | 0.962 | overall |
-| aortic | large | 9 | 0.634 | 0.986 | 1.003 | segment |
-| aortic | medium | 14 | 0.431 | 0.713 | 1.113 | segment |
+| all | all | 74 | 0.179 | 0.388 | 0.725 | overall |
+| aortic | large | 16 | 0.356 | 0.523 | 0.986 | segment |
+| aortic | medium | 18 | 0.357 | 0.469 | 0.972 | segment |
 | aortic | small | 16 | 0.408 | 0.590 | 0.918 | segment |
-| mitral | medium | 5 | 0.153 | 0.197 | 0.235 | segment |
-| mitral | small | 5 | 0.031 | 0.046 | 0.096 | segment |
+| mitral | medium | 7 | 0.058 | 0.153 | 0.216 | segment |
+| mitral | small | 7 | 0.039 | 0.081 | 0.137 | segment |
 | tricuspid | small | 5 | 0.160 | 0.162 | 0.179 | segment |
 
 ## Duration by valve type
@@ -69,28 +72,29 @@ Months from start to primary completion in the benchmark set. This is what the n
 
 | Valve type | Trials | P25 | Median | P75 |
 |---|---|---|---|---|
-| aortic | 39 | 13.1 | 20.6 | 32.3 |
-| mitral | 10 | 30.6 | 35.2 | 53.5 |
-| tricuspid | 5 | 16.5 | 27.1 | 27.4 |
-| all | 54 | 16.1 | 22.5 | 35.7 |
+| aortic | 50 | 14.4 | 23.4 | 43.2 |
+| mitral | 14 | 33.6 | 41.1 | 59.0 |
+| other | 1 | 64.5 | 64.5 | 64.5 |
+| tricuspid | 9 | 27.1 | 38.9 | 42.0 |
+| all | 74 | 17.6 | 30.5 | 45.8 |
 
 ## Backtest and model choice
 
-Leave-one-out cross-validation: each of the 54 benchmark trials is held out in turn, every model is fitted on the other trials, and the held-out trial's months from start to primary completion is predicted. Every trial is scored exactly once per model, so there is no random split and no seed.
+Leave-one-out cross-validation: each of the 74 benchmark trials is held out in turn, every model is fitted on the other trials, and the held-out trial's months from start to primary completion is predicted. Every trial is scored exactly once per model, so there is no random split and no seed.
 
 | Model | Trials scored | Median abs. % error | MAPE | Inside P25 to P75 | Selected |
 |---|---|---|---|---|---|
-| Per-site rate | 54 | 57.7% | 76.7% | 38.9% |  |
-| Log-linear regression | 54 | 36.8% | 52.7% | 44.4% | yes |
-| Naive baseline | 54 | 41.9% | 58.8% | 48.1% |  |
+| Per-site rate | 74 | 59.1% | 94.2% | 43.2% |  |
+| Log-linear regression | 74 | 40.5% | 56.6% | 44.6% | yes |
+| Naive baseline | 74 | 43.1% | 67.2% | 47.3% |  |
 
-**Forecast outputs use the Log-linear regression model.** It had the lowest median absolute percentage error under leave-one-out cross-validation (36.8% against 41.9% for the naive baseline). Median error is the selection criterion because MAPE is dominated by a few short trials.
+**Forecast outputs use the Log-linear regression model.** It had the lowest median absolute percentage error under leave-one-out cross-validation (40.5% against 43.1% for the naive baseline). Median error is the selection criterion because MAPE is dominated by a few short trials.
 
 Median absolute percentage error is the more representative number; MAPE is pulled up by a few short trials. Coverage is the share of trials whose actual duration fell inside the model's P25 to P75 range. A well calibrated range would cover about 50%.
 
 ## Stale records
 
-A trial is flagged stale when its last update was posted more than 12 months before the snapshot date. Sponsors are expected to update their registry entries at least yearly, so a stale record may show a status or posted completion date that no longer reflects the trial. A stale trial marked Recruiting may have finished enrolling or stopped; a stale posted date may already have been missed or moved. The forecast still runs on stale trials, but their status label deserves less weight. In this snapshot 39 of 117 forecast trials are stale.
+A trial is flagged stale when its last update was posted more than 12 months before the snapshot date. Sponsors are expected to update their registry entries at least yearly, so a stale record may show a status or posted completion date that no longer reflects the trial. A stale trial marked Recruiting may have finished enrolling or stopped; a stale posted date may already have been missed or moved. The forecast still runs on stale trials, but their status label deserves less weight. In this snapshot 39 of 117 active trials are stale.
 
 ## What the forecast ignores
 

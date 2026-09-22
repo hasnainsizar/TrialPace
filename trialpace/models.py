@@ -28,7 +28,8 @@ class TrialRecord:
     title: str | None
     lead_sponsor_raw: str | None
     lead_sponsor_class: str | None
-    sponsor: str
+    sponsor_group: str
+    mapped_via: str
     overall_status: str | None
     phase: str | None
     conditions: str | None
