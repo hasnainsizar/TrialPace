@@ -105,7 +105,7 @@ def _choice_text(comparison: pd.DataFrame, forecast_cfg: dict[str, Any]) -> str:
 
 
 LABEL_MEANINGS = {
-    "finished_enrolling": "The trial is still listed as active but its primary completion date is marked ACTUAL, so enrollment has finished. No forecast is made and the trial is kept out of the other counts. If it meets the benchmark rules it joins the benchmark set.",
+    "primary_completion_reached": "The trial is still listed as active but its primary completion date is marked ACTUAL, so the milestone has already happened. No forecast is made and the trial is kept out of the other counts. If it meets the benchmark rules it joins the benchmark set.",
     "overdue": "The sponsor's posted primary completion date is already behind the snapshot date, yet the trial is still listed as active. Either the record is out of date or the trial has slipped past its own plan.",
     "behind_forecast": "The model's median estimate has already passed while the trial is still active, or it lands more than {on_track_days} days after the posted date. Either way the trial is running slower than the posted plan or than comparable completed trials.",
     "on_track": "The median forecast lands no more than {on_track_days} days after the posted date, or earlier. Trials with no posted date are also here because there is no evidence of a delay.",

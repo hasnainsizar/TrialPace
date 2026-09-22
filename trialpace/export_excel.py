@@ -19,7 +19,7 @@ STATUS_FILLS = {
     "on_track": "C6EFCE",
     "behind_forecast": "FFEB9C",
     "overdue": "FFC7CE",
-    "finished_enrolling": "D9D9D9",
+    "primary_completion_reached": "D9D9D9",
 }
 DATE_FORMAT = "yyyy-mm-dd"
 
@@ -122,7 +122,7 @@ def summary_frame(
             rows.append((f"Trials: {group}", int(count)))
     rows.append(("Active trials", len(forecasts)))
     if not forecasts.empty:
-        finished = str(labels.get("finished_enrolling", ""))
+        finished = str(labels.get("primary_completion_reached", ""))
         rows.append(("Active trials with a forecast", int((forecasts["status_label"] != finished).sum())))
         models = forecasts.loc[forecasts["model"] != "none", "model"]
         rows.append(("Forecast model", str(models.iloc[0]) if len(models) else "none"))

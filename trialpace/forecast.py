@@ -79,7 +79,7 @@ def build_benchmarks(trials: pd.DataFrame, forecast_cfg: dict[str, Any]) -> tupl
 
 
 def reached_primary_completion(trials: pd.DataFrame) -> pd.Series:
-    """Active trials whose primary completion date is ACTUAL have finished enrolling."""
+    """Active trials whose primary completion date is ACTUAL have already reached that milestone."""
     return trials["primary_completion_type"] == "ACTUAL"
 
 
@@ -146,7 +146,7 @@ def rates_frame(rates: dict[tuple[str, str], RateQuantiles]) -> pd.DataFrame:
 
 
 def forecast_months(target: int, sites: int, rates: RateQuantiles) -> tuple[float, float, float]:
-    """Months to target as (fast P25, median, slow P75). Faster rates give earlier dates."""
+    """Months to primary completion as (fast P25, median, slow P75). Faster rates give earlier dates."""
     capacity_high = sites * rates.p75
     capacity_mid = sites * rates.p50
     capacity_low = sites * rates.p25
@@ -205,7 +205,7 @@ def build_forecasts(
     labels = forecast_cfg["labels"]
     for row in active.itertuples(index=False):
         if row.primary_completion_type == "ACTUAL":
-            rows.append(_completed_row(row, str(labels["finished_enrolling"])))
+            rows.append(_completed_row(row, str(labels["primary_completion_reached"])))
             continue
         if pd.isna(row.enrollment_count) or int(row.enrollment_count) <= 0:
             exclusions.append({"nct_id": row.nct_id, "reason": "target enrollment missing or zero"})
@@ -270,7 +270,7 @@ def _completed_row(row: Any, label: str) -> dict[str, Any]:
         "site_count": int(row.site_count),
         "start_date": row.start_date,
         "model": "none",
-        "basis": "primary completion date is ACTUAL; enrollment finished",
+        "basis": "primary completion date is ACTUAL; milestone already reached",
         "months_p25": None,
         "months_median": None,
         "months_p75": None,

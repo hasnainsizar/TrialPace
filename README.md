@@ -1,8 +1,8 @@
 # trialpace
 
-Enrollment pace forecasts for structural heart device trials, built from public ClinicalTrials.gov data.
+Forecasts of when structural heart device trials reach primary completion, built from public ClinicalTrials.gov data.
 
-trialpace pulls interventional trials since 2010 for transcatheter aortic, mitral, and tricuspid valve therapy, narrows them to industry-sponsored device trials, works out how long comparable completed trials took, and estimates when each active trial will reach its enrollment target. The output is a set of CSV tables ready for Power BI and a formatted Excel workbook.
+trialpace pulls interventional trials since 2010 for transcatheter aortic, mitral, and tricuspid valve therapy, narrows them to industry-sponsored device trials, works out how long comparable completed trials took, and estimates when each active trial will reach primary completion. Primary completion is the point when the last participant's main outcome data is collected, which usually comes after enrollment ends. The output is a set of CSV tables ready for Power BI and a formatted Excel workbook.
 
 This project uses only the public ClinicalTrials.gov API. It is not affiliated with, endorsed by, or informed by Edwards Lifesciences, Medtronic, Boston Scientific, Abbott, or any other company named in the data.
 
@@ -61,13 +61,13 @@ pytest
 
 Completed trials with at least 5 listed sites form a benchmark set. Three simple models are compared by leave-one-out cross-validation, where each benchmark trial is predicted from a model fitted on all the others:
 
-- **Per-site rate.** Patients per site per month by valve type and trial size. Months to target = target / (sites x rate).
+- **Per-site rate.** Patients per site per month by valve type and trial size. Months to primary completion = target enrollment / (sites x rate).
 - **Log-linear regression.** Duration as a function of target enrollment, site count, and valve type.
 - **Naive baseline.** The typical duration of completed trials with the same valve type, ignoring target and sites.
 
 Whichever model has the lowest median error across those predictions is used for the forecast outputs. Each active trial gets an early, median, and late date. The median date is compared to the sponsor's posted primary completion date, and the trial gets one of four labels:
 
-- **Finished enrolling.** The trial is still listed as active but its primary completion date is marked actual, so enrollment has finished. No forecast is made. If it meets the benchmark rules it joins the benchmark set instead.
+- **Primary completion reached.** The trial is still listed as active but its primary completion date is marked actual, so the milestone has already happened. No forecast is made. If it meets the benchmark rules it joins the benchmark set instead.
 - **Overdue.** The sponsor's own date has already gone by, but the trial is still listed as active.
 - **Behind forecast.** The model's median estimate has already gone by, or lands more than the configured number of days after the posted date.
 - **On track.** The median forecast lands on or before the posted date, or within the configured allowance after it.
@@ -89,7 +89,7 @@ The search returned 1,444 unique trials. The scope filters removed 729 with no d
 
 Other is mostly smaller device makers, many of them in China and Europe. Sponsor names are grouped into a parent company where the registry name is an affiliate or an acquired company, and every trial keeps its original sponsor name and the reason for the grouping in a `mapped_via` column.
 
-Of 117 active trials, 31 have finished enrolling and are not forecast. The remaining 86 break down as 36 Overdue (the sponsor's own date has gone by while the trial is still listed as active), 32 Behind forecast, and 18 On track. 39 of the 117 are flagged stale because their registry record was last updated more than 12 months before the snapshot, so their status and posted date may be out of date. The stale share is 43% in the Other group against 24% for Edwards and 25% for Abbott.
+Of 117 active trials, 31 have already reached primary completion and are not forecast. The remaining 86 break down as 36 Overdue (the sponsor's own date has gone by while the trial is still listed as active), 32 Behind forecast, and 18 On track. 39 of the 117 are flagged stale because their registry record was last updated more than 12 months before the snapshot, so their status and posted date may be out of date. The stale share is 43% in the Other group against 24% for Edwards and 25% for Abbott.
 
 The benchmark set has 74 trials: 54 completed plus 20 active trials whose primary completion date is already actual. Under leave-one-out cross-validation the log-linear regression had the lowest median error at 41%, against 43% for the naive valve-type median and 59% for the per-site rate, so the regression is used for the outputs. The margin over the naive baseline is small. Completed aortic trials took a median of 21 months from start to primary completion, mitral trials 35 months, and tricuspid trials 27 months.
 

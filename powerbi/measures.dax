@@ -9,13 +9,13 @@
 Active Trials =
 COUNTROWS ( fact_forecast )
 
-// Measure. Active trials that still have a forecast, i.e. enrollment not yet finished.
+// Measure. Active trials that still have a forecast, i.e. primary completion not yet reached.
 Forecast Trials =
-CALCULATE ( COUNTROWS ( fact_forecast ), fact_forecast[status_label] <> "Finished enrolling" )
+CALCULATE ( COUNTROWS ( fact_forecast ), fact_forecast[status_label] <> "Primary completion reached" )
 
 // Measure
-Trials Finished Enrolling =
-CALCULATE ( COUNTROWS ( fact_forecast ), fact_forecast[status_label] = "Finished enrolling" )
+Trials Primary Completion Reached =
+CALCULATE ( COUNTROWS ( fact_forecast ), fact_forecast[status_label] = "Primary completion reached" )
 
 // Measure
 Total Target Enrollment =
@@ -46,7 +46,7 @@ Median Gap Days =
 MEDIAN ( fact_forecast[gap_days] )
 
 // Measure
-Median Months To Target =
+Median Months To Primary Completion =
 MEDIAN ( fact_forecast[months_median] )
 
 // Measure. Trials whose registry record was last updated more than the configured

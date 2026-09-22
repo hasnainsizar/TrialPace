@@ -120,7 +120,7 @@ def forecast(config: Path = ConfigOption, snapshot_date: Optional[str] = DateOpt
     db.replace_rows(conn, "horizon_checks", day, horizon_checks)
 
     from_active = int(benchmarks["overall_status"].isin(cfg["forecast"]["active_statuses"]).sum()) if not benchmarks.empty else 0
-    finished = int((forecasts["status_label"] == cfg["forecast"]["labels"]["finished_enrolling"]).sum()) if not forecasts.empty else 0
+    finished = int((forecasts["status_label"] == cfg["forecast"]["labels"]["primary_completion_reached"]).sum()) if not forecasts.empty else 0
     typer.echo(f"Snapshot {day}: {len(benchmarks)} benchmark trials ({from_active} of them active trials that reached primary completion), {len(forecasts)} active trials, {len(forecasts) - finished} forecast with the {model_name} model")
     if not fitted:
         typer.echo(f"  The {model_name} model could not be fitted on {len(benchmarks)} benchmark trials, so no forecasts were produced.")

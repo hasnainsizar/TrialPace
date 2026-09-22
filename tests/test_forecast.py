@@ -189,7 +189,7 @@ def test_active_trial_with_actual_primary_completion_is_not_forecast(config: dic
     assert exclusions.empty
     by_id = forecasts.set_index("nct_id")
     done = by_id.loc["DONE"]
-    assert done["status_label"] == "Finished enrolling"
+    assert done["status_label"] == "Primary completion reached"
     assert done["model"] == "none"
     assert pd.isna(done["date_median"]) and pd.isna(done["months_median"]) and pd.isna(done["gap_days"])
     assert done["posted_primary_completion_date"] == pd.Timestamp("2024-01-01")

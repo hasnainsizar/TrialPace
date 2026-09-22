@@ -15,7 +15,7 @@ This guide builds a five page report in Power BI Desktop from the CSV files that
 3. In Power Query, fix the data types. Power BI guesses well for most columns. Check these:
    - dim_date[date]: Date
    - dim_trial: start_date, primary_completion_date, completion_date, last_update_date as Date. is_stale as Whole Number. sponsor_group, sponsor_name, mapped_via as Text.
-   - fact_forecast: start_date, date_p25, date_median, date_p75, posted_primary_completion_date, last_update_posted as Date. gap_days and is_stale as Whole Number. months_p25, months_median, months_p75 as Decimal Number. model and basis as Text. Rows with the status "Finished enrolling" have blank forecast columns on purpose.
+   - fact_forecast: start_date, date_p25, date_median, date_p75, posted_primary_completion_date, last_update_posted as Date. gap_days and is_stale as Whole Number. months_p25, months_median, months_p75 as Decimal Number. model and basis as Text. Rows with the status "Primary completion reached" have blank forecast columns on purpose.
    - fact_benchmark: start_date, primary_completion_date as Date. rate_per_site_month and months as Decimal Number.
    - fact_site: snapshot_date as Date.
    - sponsor_key everywhere as Whole Number.
@@ -60,7 +60,7 @@ Every visual that shows fact_forecast[status_label] should use the same colours.
 | On track | Green | #C6EFCE |
 | Behind forecast | Yellow | #FFEB9C |
 | Overdue | Red | #FFC7CE |
-| Finished enrolling | Gray | #D9D9D9 |
+| Primary completion reached | Gray | #D9D9D9 |
 
 For tables, apply the same hex values as conditional formatting Rules on the status_label column (Background color, Rules, field value equals each label). These match the fills in the Excel export.
 
@@ -108,7 +108,7 @@ Power BI does not ship a native range bar visual, so the chart uses months from 
 1. Add a Clustered column chart.
    - X axis: dim_trial[nct_id]
    - Y axis: Forecast Months Median, then Posted Months as a second series
-   - Visual filter: fact_forecast[status_label] is not "Finished enrolling", so trials without a forecast do not appear as empty columns.
+   - Visual filter: fact_forecast[status_label] is not "Primary completion reached", so trials without a forecast do not appear as empty columns.
 2. Open the Analytics pane for the visual, choose Error bars, enable them for Forecast Months Median, set Type to By field, Lower bound Forecast Months P25, Upper bound Forecast Months P75.
 3. Sort the axis by Forecast Months Median descending so the slowest trials come first.
 4. Add a Top N filter on nct_id (say top 40 by Forecast Months Median) so the chart is readable, and tell the reader in the page title that it is filtered.

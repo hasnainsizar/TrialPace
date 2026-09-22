@@ -161,10 +161,10 @@ forecast:
   # A gap above on_track_max_days is Behind forecast.
   status_thresholds:
     on_track_max_days: 90
-  # Label priority: finished_enrolling, overdue, behind_forecast (median date passed
+  # Label priority: primary_completion_reached, overdue, behind_forecast (median date passed
   # or gap over the threshold), otherwise on_track.
   labels:
-    finished_enrolling: Finished enrolling
+    primary_completion_reached: Primary completion reached
     overdue: Overdue
     behind_forecast: Behind forecast
     on_track: On track
