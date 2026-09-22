@@ -28,7 +28,11 @@ Three models are fitted on the benchmark set and compared by leave-one-out cross
 
 For every model, each duration is added to the trial's start date, and the result is always a range, never a single date. Trials whose median forecast runs past {max_horizon_months} months from start are excluded and listed with a reason. {horizon_text}
 
-**Status label.** Gap = median forecast date minus the sponsor's posted primary completion date. Up to {on_track_days} days is On track, up to {at_risk_days} days is At risk, beyond that is Likely late. A negative gap means the forecast is ahead of the posted date. Trials with no posted date get their own label.
+**Status label.** Two checks come first. If the sponsor's posted primary completion date is already behind the snapshot date, the trial is Past posted date. Otherwise, if the model's median date is already behind the snapshot date, the trial is Past forecast. Only then is the gap used: gap = median forecast date minus the posted date. Up to {on_track_days} days is On track, up to {at_risk_days} days is At risk, beyond that is Likely late. A negative gap means the forecast is ahead of the posted date. Trials with no posted date get their own label.
+
+## Status labels in this snapshot
+
+{labels_table}
 
 ## Per-site rates in this snapshot
 

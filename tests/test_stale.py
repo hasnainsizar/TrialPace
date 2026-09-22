@@ -49,7 +49,7 @@ def test_stale_flag_is_stored_and_carried_into_forecasts(tmp_path: Path, config:
 
     predictor = RatePredictor(config["forecast"])
     predictor.rates = {OVERALL_KEY: RateQuantiles(p25=0.5, p50=1.0, p75=2.0, n=10, source="overall")}
-    forecasts, _ = build_forecasts(trials.reset_index(), predictor, config["forecast"])
+    forecasts, _ = build_forecasts(trials.reset_index(), predictor, config["forecast"], snapshot)
     row = forecasts.set_index("nct_id").loc["NCT00000002"]
     assert row["is_stale"] == 0
     assert row["last_update_posted"] == pd.Timestamp("2025-08-01")

@@ -36,7 +36,18 @@ Three models are fitted on the benchmark set and compared by leave-one-out cross
 
 For every model, each duration is added to the trial's start date, and the result is always a range, never a single date. Trials whose median forecast runs past 240 months from start are excluded and listed with a reason. In this snapshot, after the scope and benchmark filters, the horizon cap excluded 0 under the naive baseline model, 20 under the per-site rate model, 0 under the log-linear regression model.
 
-**Status label.** Gap = median forecast date minus the sponsor's posted primary completion date. Up to 90 days is On track, up to 365 days is At risk, beyond that is Likely late. A negative gap means the forecast is ahead of the posted date. Trials with no posted date get their own label.
+**Status label.** Two checks come first. If the sponsor's posted primary completion date is already behind the snapshot date, the trial is Past posted date. Otherwise, if the model's median date is already behind the snapshot date, the trial is Past forecast. Only then is the gap used: gap = median forecast date minus the posted date. Up to 90 days is On track, up to 365 days is At risk, beyond that is Likely late. A negative gap means the forecast is ahead of the posted date. Trials with no posted date get their own label.
+
+## Status labels in this snapshot
+
+| Label | Meaning | Trials |
+|---|---|---|
+| Past posted date | The sponsor's posted primary completion date is already behind the snapshot date, yet the trial is still listed as active. Either the record is out of date or the trial has slipped past its own plan. | 67 |
+| Past forecast | The model's median estimate is already behind the snapshot date but the trial is still active. The estimate has passed, so the trial is running slower than comparable completed trials. | 25 |
+| On track | The median forecast lands no more than 90 days after the posted date, or earlier. | 20 |
+| At risk | The median forecast lands between 90 and 365 days after the posted date. | 5 |
+| Likely late | The median forecast lands more than 365 days after the posted date. | 0 |
+| No posted date | The registry has no primary completion date for the trial, so there is nothing to compare against. | 0 |
 
 ## Per-site rates in this snapshot
 

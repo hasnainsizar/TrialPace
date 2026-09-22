@@ -10,6 +10,7 @@ from trialpace.forecast import (
     RateQuantiles,
     add_months,
     build_forecasts,
+    classify_status,
     forecast_months,
     label_status,
     lookup_rate,
@@ -78,7 +79,7 @@ def test_build_forecasts_produces_range_and_label(config: dict) -> None:
             },
         ]
     )
-    forecasts, exclusions = build_forecasts(trials, _rate_predictor(config), config["forecast"])
+    forecasts, exclusions = build_forecasts(trials, _rate_predictor(config), config["forecast"], date(2024, 6, 1))
     assert len(forecasts) == 1
     row = forecasts.iloc[0]
     assert row["model"] == "rate"
@@ -102,6 +103,65 @@ def test_build_forecasts_excludes_trials_beyond_horizon(config: dict) -> None:
             }
         ]
     )
-    forecasts, exclusions = build_forecasts(trials, _rate_predictor(config), config["forecast"])
+    forecasts, exclusions = build_forecasts(trials, _rate_predictor(config), config["forecast"], date(2024, 6, 1))
     assert forecasts.empty
     assert "horizon" in exclusions.iloc[0]["reason"]
+
+
+SNAPSHOT = date(2026, 9, 21)
+
+
+def test_classify_past_posted_date_takes_priority(config: dict) -> None:
+    posted = date(2026, 1, 1)
+    assert classify_status(posted, date(2027, 6, 1), SNAPSHOT, config["forecast"]) == "Past posted date"
+    assert classify_status(posted, date(2025, 6, 1), SNAPSHOT, config["forecast"]) == "Past posted date"
+
+
+def test_classify_past_forecast_when_median_is_behind_snapshot(config: dict) -> None:
+    assert classify_status(date(2027, 6, 1), date(2026, 3, 1), SNAPSHOT, config["forecast"]) == "Past forecast"
+    assert classify_status(None, date(2026, 3, 1), SNAPSHOT, config["forecast"]) == "Past forecast"
+
+
+def test_classify_falls_through_to_gap_thresholds(config: dict) -> None:
+    posted = date(2027, 1, 1)
+    assert classify_status(posted, date(2026, 12, 1), SNAPSHOT, config["forecast"]) == "On track"
+    assert classify_status(posted, date(2027, 7, 1), SNAPSHOT, config["forecast"]) == "At risk"
+    assert classify_status(posted, date(2028, 6, 1), SNAPSHOT, config["forecast"]) == "Likely late"
+    assert classify_status(None, date(2027, 1, 1), SNAPSHOT, config["forecast"]) == "No posted date"
+
+
+def test_classify_dates_equal_to_snapshot_are_not_past(config: dict) -> None:
+    assert classify_status(SNAPSHOT, SNAPSHOT, SNAPSHOT, config["forecast"]) == "On track"
+
+
+def test_build_forecasts_labels_trials_past_their_dates(config: dict) -> None:
+    trials = pd.DataFrame(
+        [
+            {
+                "nct_id": "PAST_POSTED", "sponsor": "Other", "overall_status": "RECRUITING", "valve_type": "aortic",
+                "enrollment_count": 120, "site_count": 6, "start_date": pd.Timestamp("2026-01-01"),
+                "primary_completion_date": pd.Timestamp("2026-06-01"), "primary_completion_type": "ESTIMATED",
+                "last_update_date": pd.NaT, "is_stale": None,
+            },
+            {
+                "nct_id": "PAST_FORECAST", "sponsor": "Other", "overall_status": "RECRUITING", "valve_type": "aortic",
+                "enrollment_count": 12, "site_count": 6, "start_date": pd.Timestamp("2024-01-01"),
+                "primary_completion_date": pd.Timestamp("2027-06-01"), "primary_completion_type": "ESTIMATED",
+                "last_update_date": pd.NaT, "is_stale": None,
+            },
+            {
+                "nct_id": "PAST_BOTH", "sponsor": "Other", "overall_status": "ACTIVE_NOT_RECRUITING", "valve_type": "aortic",
+                "enrollment_count": 12, "site_count": 6, "start_date": pd.Timestamp("2020-01-01"),
+                "primary_completion_date": pd.Timestamp("2021-01-01"), "primary_completion_type": "ESTIMATED",
+                "last_update_date": pd.NaT, "is_stale": None,
+            },
+        ]
+    )
+    forecasts, _ = build_forecasts(trials, _rate_predictor(config), config["forecast"], SNAPSHOT)
+    labels = forecasts.set_index("nct_id")["status_label"]
+    assert labels["PAST_POSTED"] == "Past posted date"
+    assert labels["PAST_FORECAST"] == "Past forecast"
+    assert labels["PAST_BOTH"] == "Past posted date"
+    medians = forecasts.set_index("nct_id")["date_median"]
+    assert medians["PAST_FORECAST"] < pd.Timestamp(SNAPSHOT)
+    assert medians["PAST_POSTED"] > pd.Timestamp(SNAPSHOT)

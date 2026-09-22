@@ -16,6 +16,8 @@ from trialpace.db import read_table
 
 HEADER_FONT = Font(bold=True)
 STATUS_FILLS = {
+    "past_posted_date": "F4B084",
+    "past_forecast": "BDD7EE",
     "on_track": "C6EFCE",
     "at_risk": "FFEB9C",
     "likely_late": "FFC7CE",
@@ -109,6 +111,7 @@ def summary_frame(
     filter_log: pd.DataFrame,
     snapshot: date,
     stale_after_months: float,
+    labels: dict[str, str],
 ) -> pd.DataFrame:
     rows: list[tuple[str, Any]] = [("Snapshot date", snapshot.isoformat())]
     for step in filter_log.sort_values("step_order").itertuples(index=False):
@@ -120,8 +123,9 @@ def summary_frame(
     rows.append(("Active trials with a forecast", len(forecasts)))
     if not forecasts.empty:
         rows.append(("Forecast model", str(forecasts["model"].iloc[0])))
-        for label, count in forecasts["status_label"].value_counts().items():
-            rows.append((f"Forecast status: {label}", int(count)))
+        counts = forecasts["status_label"].value_counts()
+        for label in labels.values():
+            rows.append((f"Forecast status: {label}", int(counts.get(label, 0))))
         rows.append((f"Stale forecast trials (last update more than {stale_after_months:g} months before snapshot)", int(forecasts["is_stale"].fillna(0).sum())))
     rows.append(("Benchmark trials", len(benchmarks)))
     if not benchmarks.empty:
@@ -155,7 +159,7 @@ def export_excel(conn: sqlite3.Connection, snapshot: date, config: dict[str, Any
     wb = Workbook()
     ws = wb.active
     ws.title = "Summary"
-    _write_frame(ws, summary_frame(trials, forecasts, benchmarks, comparison, filter_log, snapshot, float(config["forecast"]["stale_after_months"])), "No data loaded")
+    _write_frame(ws, summary_frame(trials, forecasts, benchmarks, comparison, filter_log, snapshot, float(config["forecast"]["stale_after_months"]), labels), "No data loaded")
     ws.auto_filter.ref = None
     _append_block(ws, top_other_sponsors(trials, config["sponsors"]), "Top Other sponsors by trials in scope", "No trials in the Other group")
 

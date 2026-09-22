@@ -65,7 +65,14 @@ Completed trials with at least 5 listed sites form a benchmark set. Three simple
 - **Log-linear regression.** Duration as a function of target enrollment, site count, and valve type.
 - **Naive baseline.** The typical duration of completed trials with the same valve type, ignoring target and sites.
 
-Whichever model has the lowest median error across those predictions is used for the forecast outputs. Each active trial gets an early, median, and late date. The median date is compared to the sponsor's posted primary completion date, and the trial is labelled On track, At risk, or Likely late. METHOD.md has the details and the current numbers.
+Whichever model has the lowest median error across those predictions is used for the forecast outputs. Each active trial gets an early, median, and late date. The median date is compared to the sponsor's posted primary completion date, and the trial gets one of these labels:
+
+- **Past posted date.** The sponsor's own date has already gone by, but the trial is still listed as active. Checked first.
+- **Past forecast.** The model's median estimate has already gone by. The trial is slower than comparable completed trials.
+- **On track, At risk, Likely late.** How far the median forecast lands after the posted date, using the day thresholds in config.yaml.
+- **No posted date.** Nothing to compare against.
+
+METHOD.md has the details and the current counts.
 
 ## Results from the 2026-09-21 snapshot
 
@@ -82,7 +89,7 @@ The search returned 1,444 unique trials. The scope filters removed 729 with no d
 
 Other is mostly smaller device makers, many of them in China and Europe.
 
-Forecasts were produced for 117 active trials: 98 On track, 19 At risk, and none Likely late. 39 of the 117 are flagged stale because their registry record was last updated more than 12 months before the snapshot, so their status and posted date may be out of date. The stale share is 43% in the Other group against 24% for Edwards and 25% for Abbott.
+Forecasts were produced for 117 active trials. 67 are Past posted date: the sponsor's own primary completion date has gone by while the trial is still listed as active. Most of these are Active not recruiting trials in long follow-up whose records have not been updated. Another 25 are Past forecast, 20 On track, 5 At risk, and none Likely late. 39 of the 117 are flagged stale because their registry record was last updated more than 12 months before the snapshot, so their status and posted date may be out of date. The stale share is 43% in the Other group against 24% for Edwards and 25% for Abbott.
 
 The benchmark set has 54 completed trials. Under leave-one-out cross-validation the log-linear regression had the lowest median error at 37%, against 42% for the naive valve-type median and 58% for the per-site rate, so the regression is used for the outputs. The margin over the naive baseline is modest. Completed aortic trials took a median of 21 months from start to primary completion, mitral trials 35 months, and tricuspid trials 27 months.
 

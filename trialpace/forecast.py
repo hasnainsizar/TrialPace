@@ -145,7 +145,19 @@ def add_months(start: date, months: float, days_per_month: float) -> date:
     return start + timedelta(days=round(months * days_per_month))
 
 
+def classify_status(posted: date | None, forecast_median: date, snapshot: date, forecast_cfg: dict[str, Any]) -> str:
+    """Status for an active trial. Dates already behind the snapshot take priority over the gap thresholds."""
+    labels = forecast_cfg["labels"]
+    if posted is not None and posted < snapshot:
+        return str(labels["past_posted_date"])
+    if forecast_median < snapshot:
+        return str(labels["past_forecast"])
+    gap = (forecast_median - posted).days if posted else None
+    return label_status(gap, forecast_cfg)
+
+
 def label_status(gap_days: int | None, forecast_cfg: dict[str, Any]) -> str:
+    """Gap-threshold label only. Use classify_status for the full rule."""
     labels = forecast_cfg["labels"]
     if gap_days is None:
         return str(labels["no_posted_date"])
@@ -172,8 +184,9 @@ def build_forecasts(
     trials: pd.DataFrame,
     predictor: Any,
     forecast_cfg: dict[str, Any],
+    snapshot: date,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Forecast every active trial with a fitted predictor. Returns (forecasts, exclusions)."""
+    """Forecast every active trial with a fitted predictor as of the snapshot date. Returns (forecasts, exclusions)."""
     if trials.empty or predictor is None:
         return pd.DataFrame(columns=FORECAST_COLUMNS), pd.DataFrame(columns=["nct_id", "reason"])
     days_per_month = float(forecast_cfg["days_per_month"])
@@ -224,7 +237,7 @@ def build_forecasts(
                 "posted_primary_completion_date": pd.Timestamp(posted) if posted else pd.NaT,
                 "posted_primary_completion_type": row.primary_completion_type,
                 "gap_days": gap,
-                "status_label": label_status(gap, forecast_cfg),
+                "status_label": classify_status(posted, d50, snapshot, forecast_cfg),
                 "last_update_posted": row.last_update_date,
                 "is_stale": None if pd.isna(row.is_stale) else int(row.is_stale),
             }

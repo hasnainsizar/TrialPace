@@ -51,6 +51,7 @@ Choices made where the brief left room for interpretation, and why.
 - **Fallback goes straight to the overall rate.** No intermediate fallback to valve type alone. Simpler to explain, and with the current data 9 of 10 possible segments already qualify.
 - **P25 date uses the P75 rate.** Faster rates give earlier dates, so the optimistic end of the date range comes from the fast end of the rate distribution.
 - **Status thresholds:** gap up to 90 days is On track, up to 365 days is At risk, beyond that Likely late. A negative gap (forecast earlier than posted) is On track.
+- **Past posted date is checked before anything else.** If the sponsor's posted date is already behind the snapshot date and the trial is still active, comparing a forecast to that date is meaningless. The label says the record or the plan is out of date. Past forecast is checked second: an active trial whose median estimate has already passed was previously labelled On track whenever its posted date was also late, which hid the fact that the model's estimate had failed. Both labels use strict "before the snapshot date", so a date equal to the snapshot is not past. Gap days are still stored for both.
 - **Active not recruiting trials are forecast** as the brief specified, even though most have finished enrolling. METHOD.md explains how to read them.
 
 ## Models and selection

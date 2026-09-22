@@ -76,7 +76,7 @@ Add a Card visual showing fact_forecast[model] (set to First) so the page states
 
 Second table, active trial detail:
 - dim_trial[nct_id], dim_trial[title], dim_sponsor[sponsor], dim_trial[sponsor_name], fact_forecast[overall_status], fact_forecast[target_enrollment], fact_forecast[site_count], fact_forecast[date_median], fact_forecast[posted_primary_completion_date], fact_forecast[gap_days], fact_forecast[status_label], fact_forecast[is_stale]
-Apply conditional formatting on status_label with Rules: "On track" green, "At risk" amber, "Likely late" red. Apply a grey font colour rule on is_stale = 1 so stale records read as less certain.
+Apply conditional formatting on status_label with Rules: "Past posted date" orange, "Past forecast" blue-grey, "On track" green, "At risk" amber, "Likely late" red. Apply a grey font colour rule on is_stale = 1 so stale records read as less certain.
 
 ### Page 2: Forecast vs posted date
 

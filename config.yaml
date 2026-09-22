@@ -147,7 +147,10 @@ forecast:
   status_thresholds:
     on_track_max_days: 90
     at_risk_max_days: 365
+  # Label priority: past_posted_date, then past_forecast, then no_posted_date, then the gap thresholds.
   labels:
+    past_posted_date: Past posted date
+    past_forecast: Past forecast
     on_track: On track
     at_risk: At risk
     likely_late: Likely late

@@ -101,7 +101,7 @@ def forecast(config: Path = ConfigOption, snapshot_date: Optional[str] = DateOpt
     model_name = select_model(comparison, cfg["forecast"])
     predictor = make_predictor(model_name, cfg["forecast"])
     fitted = predictor.fit(benchmarks)
-    forecasts, fc_excl = build_forecasts(trials, predictor if fitted else None, cfg["forecast"])
+    forecasts, fc_excl = build_forecasts(trials, predictor if fitted else None, cfg["forecast"], day)
     exclusions = pd.concat([bench_excl.assign(reason="benchmark: " + bench_excl["reason"]), fc_excl.assign(reason="forecast: " + fc_excl["reason"])])
 
     horizon_reason = HORIZON_REASON.format(horizon=float(cfg["forecast"]["max_horizon_months"]))
@@ -109,7 +109,7 @@ def forecast(config: Path = ConfigOption, snapshot_date: Optional[str] = DateOpt
     for name in MODEL_NAMES:
         candidate = make_predictor(name, cfg["forecast"])
         candidate_fitted = candidate.fit(benchmarks)
-        _, candidate_excl = build_forecasts(trials, candidate if candidate_fitted else None, cfg["forecast"])
+        _, candidate_excl = build_forecasts(trials, candidate if candidate_fitted else None, cfg["forecast"], day)
         horizon_rows.append({"model": name, "fitted": int(candidate_fitted), "excluded_by_horizon": int((candidate_excl["reason"] == horizon_reason).sum())})
     horizon_checks = pd.DataFrame(horizon_rows)
 

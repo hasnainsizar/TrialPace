@@ -102,6 +102,29 @@ def _choice_text(comparison: pd.DataFrame, forecast_cfg: dict[str, Any]) -> str:
     )
 
 
+LABEL_MEANINGS = {
+    "past_posted_date": "The sponsor's posted primary completion date is already behind the snapshot date, yet the trial is still listed as active. Either the record is out of date or the trial has slipped past its own plan.",
+    "past_forecast": "The model's median estimate is already behind the snapshot date but the trial is still active. The estimate has passed, so the trial is running slower than comparable completed trials.",
+    "on_track": "The median forecast lands no more than {on_track_days} days after the posted date, or earlier.",
+    "at_risk": "The median forecast lands between {on_track_days} and {at_risk_days} days after the posted date.",
+    "likely_late": "The median forecast lands more than {at_risk_days} days after the posted date.",
+    "no_posted_date": "The registry has no primary completion date for the trial, so there is nothing to compare against.",
+}
+
+
+def _labels_table(forecasts: pd.DataFrame, forecast_cfg: dict[str, Any]) -> str:
+    labels: dict[str, str] = forecast_cfg["labels"]
+    thresholds = forecast_cfg["status_thresholds"]
+    counts = forecasts["status_label"].value_counts() if not forecasts.empty else pd.Series(dtype=int)
+    lines = ["| Label | Meaning | Trials |", "|---|---|---|"]
+    for key, label in labels.items():
+        meaning = LABEL_MEANINGS.get(key, "").format(
+            on_track_days=thresholds["on_track_max_days"], at_risk_days=thresholds["at_risk_max_days"]
+        )
+        lines.append(f"| {label} | {meaning} | {int(counts.get(label, 0))} |")
+    return "\n".join(lines)
+
+
 def render_method(config: dict[str, Any], context: dict[str, Any], snapshot: date) -> str:
     forecast_cfg = config["forecast"]
     thresholds = forecast_cfg["status_thresholds"]
@@ -140,6 +163,7 @@ def render_method(config: dict[str, Any], context: dict[str, Any], snapshot: dat
     rendered = template.format(
         stale_after_months=forecast_cfg["stale_after_months"],
         stale_text=stale_text,
+        labels_table=_labels_table(forecasts, forecast_cfg),
         snapshot=snapshot.isoformat(),
         filter_table=_filter_table(context["filter_log"]),
         benchmark_table=_benchmark_table(exclusions, len(benchmarks)),
