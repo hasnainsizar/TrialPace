@@ -48,6 +48,47 @@ def _write_frame(ws: Worksheet, frame: pd.DataFrame, empty_message: str) -> None
         ws.column_dimensions[get_column_letter(index)].width = max(width, 8)
 
 
+def _append_block(ws: Worksheet, frame: pd.DataFrame, title: str, empty_message: str) -> None:
+    """Append a titled table below whatever the sheet already holds."""
+    ws.append([])
+    ws.append([title])
+    ws.cell(row=ws.max_row, column=1).font = HEADER_FONT
+    header_row = ws.max_row + 1
+    ws.append(list(frame.columns))
+    for cell in ws[header_row]:
+        cell.font = HEADER_FONT
+    if frame.empty:
+        ws.append([empty_message])
+        return
+    date_columns = [c for c in frame.columns if pd.api.types.is_datetime64_any_dtype(frame[c])]
+    for row in frame.itertuples(index=False):
+        ws.append([None if pd.isna(v) else (v.to_pydatetime().date() if isinstance(v, pd.Timestamp) else v) for v in row])
+    for column in date_columns:
+        letter = get_column_letter(list(frame.columns).index(column) + 1)
+        for cell in ws[letter][header_row:]:
+            cell.number_format = DATE_FORMAT
+
+
+def _with_sponsor_name(frame: pd.DataFrame, trials: pd.DataFrame) -> pd.DataFrame:
+    """Insert the original lead sponsor name right after the sponsor group column."""
+    if frame.empty or "sponsor" not in frame.columns or trials.empty:
+        return frame
+    names = trials.set_index("nct_id")["lead_sponsor_raw"]
+    out = frame.copy()
+    out.insert(list(out.columns).index("sponsor") + 1, "sponsor_name", out["nct_id"].map(names))
+    return out
+
+
+def top_other_sponsors(trials: pd.DataFrame, sponsor_cfg: dict[str, Any], limit: int = 10) -> pd.DataFrame:
+    default = str(sponsor_cfg.get("default", "Other"))
+    columns = ["sponsor_name", "trials_in_scope"]
+    if trials.empty:
+        return pd.DataFrame(columns=columns)
+    other = trials[trials["sponsor"] == default]
+    counts = other["lead_sponsor_raw"].fillna("(no sponsor name)").value_counts().head(limit)
+    return pd.DataFrame({"sponsor_name": counts.index, "trials_in_scope": counts.values}, columns=columns)
+
+
 def _status_fill(ws: Worksheet, frame: pd.DataFrame, labels: dict[str, str]) -> None:
     if frame.empty or "status_label" not in frame.columns:
         return
@@ -67,6 +108,7 @@ def summary_frame(
     comparison: pd.DataFrame,
     filter_log: pd.DataFrame,
     snapshot: date,
+    stale_after_months: float,
 ) -> pd.DataFrame:
     rows: list[tuple[str, Any]] = [("Snapshot date", snapshot.isoformat())]
     for step in filter_log.sort_values("step_order").itertuples(index=False):
@@ -80,6 +122,7 @@ def summary_frame(
         rows.append(("Forecast model", str(forecasts["model"].iloc[0])))
         for label, count in forecasts["status_label"].value_counts().items():
             rows.append((f"Forecast status: {label}", int(count)))
+        rows.append((f"Stale forecast trials (last update more than {stale_after_months:g} months before snapshot)", int(forecasts["is_stale"].fillna(0).sum())))
     rows.append(("Benchmark trials", len(benchmarks)))
     if not benchmarks.empty:
         rows.append(("Median rate per site per month", round(float(benchmarks["rate_per_site_month"].median()), 3)))
@@ -106,15 +149,18 @@ def export_excel(conn: sqlite3.Connection, snapshot: date, config: dict[str, Any
     labels: dict[str, str] = config["forecast"]["labels"]
 
     if not sites.empty and not trials.empty:
-        sites = sites.merge(trials[["nct_id", "sponsor", "overall_status", "valve_type"]], on="nct_id", how="left")
+        sites = sites.merge(trials[["nct_id", "sponsor", "lead_sponsor_raw", "overall_status", "valve_type"]], on="nct_id", how="left")
+        sites = sites.rename(columns={"lead_sponsor_raw": "sponsor_name"})
 
     wb = Workbook()
     ws = wb.active
     ws.title = "Summary"
-    _write_frame(ws, summary_frame(trials, forecasts, benchmarks, comparison, filter_log, snapshot), "No data loaded")
+    _write_frame(ws, summary_frame(trials, forecasts, benchmarks, comparison, filter_log, snapshot, float(config["forecast"]["stale_after_months"])), "No data loaded")
+    ws.auto_filter.ref = None
+    _append_block(ws, top_other_sponsors(trials, config["sponsors"]), "Top Other sponsors by trials in scope", "No trials in the Other group")
 
     ws = wb.create_sheet("Active Trials Forecast")
-    forecast_view = forecasts.drop(columns=["snapshot_date"], errors="ignore")
+    forecast_view = _with_sponsor_name(forecasts.drop(columns=["snapshot_date"], errors="ignore"), trials)
     _write_frame(ws, forecast_view, "No active trials could be forecast for this snapshot")
     _status_fill(ws, forecast_view, labels)
 
@@ -123,19 +169,8 @@ def export_excel(conn: sqlite3.Connection, snapshot: date, config: dict[str, Any
 
     ws = wb.create_sheet("Benchmark Rates")
     _write_frame(ws, segment.drop(columns=["snapshot_date"], errors="ignore"), "No benchmark trials met the criteria")
-    if not benchmarks.empty:
-        ws.append([])
-        start_row = ws.max_row + 1
-        detail = benchmarks.drop(columns=["snapshot_date"], errors="ignore")
-        ws.append(list(detail.columns))
-        for cell in ws[start_row]:
-            cell.font = HEADER_FONT
-        for row in detail.itertuples(index=False):
-            ws.append([None if pd.isna(v) else (v.to_pydatetime().date() if isinstance(v, pd.Timestamp) else v) for v in row])
-        for column in ("start_date", "primary_completion_date"):
-            letter = get_column_letter(list(detail.columns).index(column) + 1)
-            for cell in ws[letter][start_row:]:
-                cell.number_format = DATE_FORMAT
+    detail = _with_sponsor_name(benchmarks.drop(columns=["snapshot_date"], errors="ignore"), trials)
+    _append_block(ws, detail, "Benchmark trials", "No completed trials met the benchmark criteria")
 
     ws = wb.create_sheet("Data Quality")
     scope_view = filter_log.drop(columns=["snapshot_date", "step_order"], errors="ignore").rename(columns={"step": "scope_filter"})

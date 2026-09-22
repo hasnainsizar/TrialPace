@@ -65,8 +65,10 @@ def export_powerbi(conn: sqlite3.Connection, snapshot: date, config: dict[str, A
     dim_sponsor = build_dim_sponsor(trials, config["sponsors"])
     sponsor_keys = dict(zip(dim_sponsor["sponsor"], dim_sponsor["sponsor_key"]))
 
-    dim_trial = trials.drop(columns=["snapshot_date"]).copy()
+    dim_trial = trials.drop(columns=["snapshot_date"]).rename(columns={"lead_sponsor_raw": "sponsor_name"}).copy()
     dim_trial.insert(2, "sponsor_key", dim_trial["sponsor"].map(sponsor_keys))
+    leading = ["nct_id", "title", "sponsor_key", "sponsor", "sponsor_name", "lead_sponsor_class"]
+    dim_trial = dim_trial[leading + [c for c in dim_trial.columns if c not in leading]]
     for column in ("start_date", "primary_completion_date", "completion_date", "last_update_date"):
         dim_trial[column] = _date_str(dim_trial[column])
 
@@ -78,7 +80,7 @@ def export_powerbi(conn: sqlite3.Connection, snapshot: date, config: dict[str, A
     fact_forecast = forecasts.drop(columns=["snapshot_date"]).copy()
     if not fact_forecast.empty:
         fact_forecast.insert(2, "sponsor_key", fact_forecast["sponsor"].map(sponsor_keys))
-    for column in ("start_date", "date_p25", "date_median", "date_p75", "posted_primary_completion_date"):
+    for column in ("start_date", "date_p25", "date_median", "date_p75", "posted_primary_completion_date", "last_update_posted"):
         if column in fact_forecast.columns:
             fact_forecast[column] = _date_str(fact_forecast[column])
 

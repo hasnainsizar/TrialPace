@@ -134,6 +134,8 @@ forecast:
   # are excluded. Almost always a large target with an incomplete site list.
   max_horizon_months: 240
   days_per_month: 30.4375
+  # A trial is stale when its last update was posted more than this many months before the snapshot.
+  stale_after_months: 12
   size_bands:
     - name: small
       max_enrollment: 100

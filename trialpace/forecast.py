@@ -161,7 +161,7 @@ FORECAST_COLUMNS = [
     "nct_id", "sponsor", "overall_status", "valve_type", "size_band", "target_enrollment", "site_count",
     "start_date", "model", "basis", "months_p25", "months_median", "months_p75",
     "date_p25", "date_median", "date_p75", "posted_primary_completion_date",
-    "posted_primary_completion_type", "gap_days", "status_label",
+    "posted_primary_completion_type", "gap_days", "status_label", "last_update_posted", "is_stale",
 ]
 
 
@@ -225,6 +225,8 @@ def build_forecasts(
                 "posted_primary_completion_type": row.primary_completion_type,
                 "gap_days": gap,
                 "status_label": label_status(gap, forecast_cfg),
+                "last_update_posted": row.last_update_date,
+                "is_stale": None if pd.isna(row.is_stale) else int(row.is_stale),
             }
         )
     return pd.DataFrame(rows, columns=FORECAST_COLUMNS), pd.DataFrame(exclusions, columns=["nct_id", "reason"])

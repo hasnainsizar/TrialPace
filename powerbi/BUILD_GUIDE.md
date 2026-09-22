@@ -15,7 +15,8 @@ This guide builds a four page report in Power BI Desktop from the CSV files that
 3. In Power Query, fix the data types. Power BI guesses well for most columns. Check these:
    - dim_date[date]: Date
    - dim_trial: start_date, primary_completion_date, completion_date, last_update_date as Date
-   - fact_forecast: start_date, date_p25, date_median, date_p75, posted_primary_completion_date as Date. gap_days as Whole Number. months_p25, months_median, months_p75 as Decimal Number. model and basis as Text.
+   - fact_forecast: start_date, date_p25, date_median, date_p75, posted_primary_completion_date, last_update_posted as Date. gap_days and is_stale as Whole Number. months_p25, months_median, months_p75 as Decimal Number. model and basis as Text.
+   - dim_trial: sponsor is the sponsor group, sponsor_name the original lead sponsor name from the registry. is_stale as Whole Number.
    - fact_benchmark: start_date, primary_completion_date as Date. rate_per_site_month and months as Decimal Number.
    - fact_site: snapshot_date as Date.
    - sponsor_key everywhere as Whole Number.
@@ -63,6 +64,7 @@ KPI cards across the top, one Card visual each:
 - Total Sites
 - Share Likely Late
 - Median Gap Days
+- Stale Active Trials
 
 Table visual, active trials by sponsor and status:
 - Rows: dim_sponsor[sponsor]
@@ -73,8 +75,8 @@ Use a Matrix visual for this so status becomes columns. Turn on row and column s
 Add a Card visual showing fact_forecast[model] (set to First) so the page states which model produced the forecast. The model is chosen by the backtest and can change between snapshots.
 
 Second table, active trial detail:
-- dim_trial[nct_id], dim_trial[title], dim_sponsor[sponsor], fact_forecast[overall_status], fact_forecast[target_enrollment], fact_forecast[site_count], fact_forecast[date_median], fact_forecast[posted_primary_completion_date], fact_forecast[gap_days], fact_forecast[status_label]
-Apply conditional formatting on status_label with Rules: "On track" green, "At risk" amber, "Likely late" red.
+- dim_trial[nct_id], dim_trial[title], dim_sponsor[sponsor], dim_trial[sponsor_name], fact_forecast[overall_status], fact_forecast[target_enrollment], fact_forecast[site_count], fact_forecast[date_median], fact_forecast[posted_primary_completion_date], fact_forecast[gap_days], fact_forecast[status_label], fact_forecast[is_stale]
+Apply conditional formatting on status_label with Rules: "On track" green, "At risk" amber, "Likely late" red. Apply a grey font colour rule on is_stale = 1 so stale records read as less certain.
 
 ### Page 2: Forecast vs posted date
 
@@ -116,6 +118,7 @@ Purpose: does Edwards enroll faster or slower per site than competitors, and how
 2. Clustered column chart: X axis dim_sponsor[sponsor], Y axis Benchmark Trials and Active Trials.
 3. Matrix: rows dim_sponsor[sponsor], columns dim_trial[valve_type], values Trials In Snapshot.
 4. Cards: Edwards Trials, Competitor Trials.
+   A table of dim_trial[sponsor_name] with Trials In Snapshot, filtered to dim_sponsor[sponsor] = "Other" and sorted descending, shows which smaller companies make up the Other group.
 5. Add a text box under the rate chart stating the benchmark count for each sponsor. Named sponsors have far fewer benchmark trials than Other, so their quantiles rest on small numbers. The per-site rate is a descriptive comparison here even when the forecast on pages 1 and 2 uses a different model.
 
 ## 5. Refresh

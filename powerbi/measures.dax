@@ -36,6 +36,15 @@ MEDIAN ( fact_forecast[gap_days] )
 Median Months To Target =
 MEDIAN ( fact_forecast[months_median] )
 
+// Measure. Trials whose registry record was last updated more than the configured
+// number of months before the snapshot. Their status and posted date may be out of date.
+Stale Active Trials =
+CALCULATE ( COUNTROWS ( fact_forecast ), fact_forecast[is_stale] = 1 )
+
+// Measure
+Share Stale =
+DIVIDE ( [Stale Active Trials], [Active Trials] )
+
 // Calculated column. Posted primary completion date expressed as months from start,
 // so it can sit on the same axis as the forecast months.
 Posted Months From Start =

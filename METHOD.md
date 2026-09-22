@@ -77,6 +77,10 @@ Leave-one-out cross-validation: each of the 54 benchmark trials is held out in t
 
 Median absolute percentage error is the more representative number; MAPE is pulled up by a few short trials. Coverage is the share of trials whose actual duration fell inside the model's P25 to P75 range. A well calibrated range would cover about 50%.
 
+## Stale records
+
+A trial is flagged stale when its last update was posted more than 12 months before the snapshot date. Sponsors are expected to update their registry entries at least yearly, so a stale record may show a status or posted completion date that no longer reflects the trial. A stale trial marked Recruiting may have finished enrolling or stopped; a stale posted date may already have been missed or moved. The forecast still runs on stale trials, but their status label deserves less weight. In this snapshot 39 of 117 forecast trials are stale.
+
 ## What the forecast ignores
 
 - **Sites open at different times.** The site count is the number listed today. Early in a trial, far fewer sites are usually active, so the real per-site rate over the whole trial is lower than the peak rate.

@@ -13,6 +13,7 @@ A device trial cannot report results until it has enrolled enough patients. For 
 ## What it produces
 
 - A SQLite database with a dated snapshot of every trial, every listed site, and every data quality problem, so running the tool on different days builds a history.
+- A stale flag on every trial whose registry record was last updated more than 12 months before the snapshot (threshold in config.yaml). Stale records may show a status or posted date that is no longer true.
 - Six CSV tables in a star schema for Power BI, with DAX measures and a step by step build guide for a four page report.
 - An Excel workbook with the forecast, sites, benchmark rates, data quality issues, and method notes.
 - METHOD.md, regenerated on every run, describing the forecast and the backtest results.
@@ -81,7 +82,7 @@ The search returned 1,444 unique trials. The scope filters removed 729 with no d
 
 Other is mostly smaller device makers, many of them in China and Europe.
 
-Forecasts were produced for 117 active trials: 98 On track, 19 At risk, and none Likely late.
+Forecasts were produced for 117 active trials: 98 On track, 19 At risk, and none Likely late. 39 of the 117 are flagged stale because their registry record was last updated more than 12 months before the snapshot, so their status and posted date may be out of date. The stale share is 43% in the Other group against 24% for Edwards and 25% for Abbott.
 
 The benchmark set has 54 completed trials. Under leave-one-out cross-validation the log-linear regression had the lowest median error at 37%, against 42% for the naive valve-type median and 58% for the per-site rate, so the regression is used for the outputs. The margin over the naive baseline is modest. Completed aortic trials took a median of 21 months from start to primary completion, mitral trials 35 months, and tricuspid trials 27 months.
 
@@ -94,6 +95,7 @@ The benchmark set has 54 completed trials. Under leave-one-out cross-validation 
 - **A precise date.** The honest output is the range. The median is a reference point for comparison against the posted date, not a prediction to plan around.
 - **Much beyond the typical duration.** With 54 benchmark trials, the best model is only a few points better than "trials of this valve type usually take about this long". Treat the trial-specific adjustment for target and site count as a nudge, not a projection.
 - **Whether the sponsor's date is wrong.** A trial labelled Likely late is one whose posted date is more ambitious than the benchmark pace. Sponsors sometimes know things the registry does not.
+- **Whether a record is current.** The registry only shows what the sponsor last posted. Trials flagged stale have not been updated in over a year, so their status and posted date should be read with that in mind.
 
 ## Layout
 

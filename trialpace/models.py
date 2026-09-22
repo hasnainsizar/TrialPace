@@ -43,5 +43,6 @@ class TrialRecord:
     last_update_date: date | None
     valve_type: str
     site_count: int
+    is_stale: int | None = None
     sites: list[SiteRecord] = field(default_factory=list)
     issues: list[QualityIssue] = field(default_factory=list)

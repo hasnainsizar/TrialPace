@@ -17,6 +17,7 @@ from trialpace.method import render_method
 from trialpace.parse import parse_studies
 from trialpace.predictors import MODEL_NAMES, make_predictor
 from trialpace.scope import apply_scope
+from trialpace.stale import is_stale, stale_cutoff
 
 app = typer.Typer(help="Enrollment pace forecasts for structural heart device trials.", no_args_is_help=True)
 
@@ -71,6 +72,8 @@ def load(config: Path = ConfigOption, snapshot_date: Optional[str] = DateOption)
     studies = list(api.iter_raw_studies(day_dir))
     parsed, skipped = parse_studies(studies, cfg)
     records, excluded, filter_log = apply_scope(parsed, cfg["scope"])
+    for record in records:
+        record.is_stale = is_stale(record.last_update_date, day, cfg["forecast"])
     conn = db.connect(Path(cfg["paths"]["db_path"]))
     trials, sites, issues = db.replace_snapshot(conn, day, records, excluded, filter_log)
     typer.echo(f"Snapshot {day}: {len(parsed)} unique trials parsed, {trials} in scope, {sites} sites, {issues} data quality issues")
@@ -125,6 +128,8 @@ def forecast(config: Path = ConfigOption, snapshot_date: Optional[str] = DateOpt
         counts = forecasts["status_label"].value_counts()
         for label in cfg["forecast"]["labels"].values():
             typer.echo(f"  {label}: {int(counts.get(label, 0))}")
+        stale = int(forecasts["is_stale"].fillna(0).sum())
+        typer.echo(f"  Stale: {stale} of {len(forecasts)} forecast trials last updated before {stale_cutoff(day, cfg['forecast'])} ({cfg['forecast']['stale_after_months']} months before the snapshot)")
     if len(exclusions):
         typer.echo(f"  {len(exclusions)} trials excluded (reasons stored in forecast_exclusions)")
     for row in horizon_checks.itertuples(index=False):
@@ -154,6 +159,7 @@ def backtest(config: Path = ConfigOption, snapshot_date: Optional[str] = DateOpt
         "comparison": comparison,
         "sizes": sizes,
         "durations": duration_by_valve(benchmarks),
+        "forecasts": db.read_table(conn, "forecasts", day),
     }
     method_path = Path(cfg["paths"]["method_path"])
     method_path.write_text(render_method(cfg, context, day), encoding="utf-8")

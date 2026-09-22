@@ -130,8 +130,16 @@ def render_method(config: dict[str, Any], context: dict[str, Any], snapshot: dat
         f"{b['name']} (up to {b['max_enrollment']})" if b.get("max_enrollment") else f"{b['name']} (above the previous band)"
         for b in forecast_cfg["size_bands"]
     )
+    forecasts: pd.DataFrame = context.get("forecasts", pd.DataFrame())
+    if forecasts.empty or "is_stale" not in forecasts.columns:
+        stale_text = "No forecast trials were available to check for stale records."
+    else:
+        stale_count = int(forecasts["is_stale"].fillna(0).sum())
+        stale_text = f"In this snapshot {stale_count} of {len(forecasts)} forecast trials are stale."
     template = TEMPLATE_PATH.read_text(encoding="utf-8")
     rendered = template.format(
+        stale_after_months=forecast_cfg["stale_after_months"],
+        stale_text=stale_text,
         snapshot=snapshot.isoformat(),
         filter_table=_filter_table(context["filter_log"]),
         benchmark_table=_benchmark_table(exclusions, len(benchmarks)),

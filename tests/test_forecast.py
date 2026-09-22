@@ -68,11 +68,13 @@ def test_build_forecasts_produces_range_and_label(config: dict) -> None:
                 "nct_id": "NCT9", "sponsor": "Abbott", "overall_status": "RECRUITING", "valve_type": "mitral",
                 "enrollment_count": 120, "site_count": 6, "start_date": pd.Timestamp("2024-01-01"),
                 "primary_completion_date": pd.Timestamp("2025-01-01"), "primary_completion_type": "ESTIMATED",
+                "last_update_date": pd.Timestamp("2024-06-01"), "is_stale": 1,
             },
             {
                 "nct_id": "NCT10", "sponsor": "Other", "overall_status": "RECRUITING", "valve_type": "aortic",
                 "enrollment_count": 50, "site_count": 0, "start_date": pd.Timestamp("2024-01-01"),
                 "primary_completion_date": pd.NaT, "primary_completion_type": None,
+                "last_update_date": pd.NaT, "is_stale": None,
             },
         ]
     )
@@ -85,6 +87,7 @@ def test_build_forecasts_produces_range_and_label(config: dict) -> None:
     assert row["months_median"] == pytest.approx(20.0)
     assert row["gap_days"] == (row["date_median"] - pd.Timestamp("2025-01-01")).days
     assert row["status_label"] == "At risk"
+    assert row["is_stale"] == 1
     assert exclusions.iloc[0]["reason"] == "no sites listed"
 
 
@@ -95,6 +98,7 @@ def test_build_forecasts_excludes_trials_beyond_horizon(config: dict) -> None:
                 "nct_id": "NCT11", "sponsor": "Other", "overall_status": "RECRUITING", "valve_type": "aortic",
                 "enrollment_count": 3000, "site_count": 1, "start_date": pd.Timestamp("2024-01-01"),
                 "primary_completion_date": pd.NaT, "primary_completion_type": None,
+                "last_update_date": pd.NaT, "is_stale": None,
             }
         ]
     )

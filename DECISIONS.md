@@ -26,6 +26,15 @@ Choices made where the brief left room for interpretation, and why.
 - **Industry filter uses the registry's lead sponsor class.** Trials where a company is a collaborator but a hospital is the lead sponsor are excluded. The flag `scope.industry_only` turns this off.
 - **Changing the API field list invalidates the day's cache.** The manifest records the fields used; a mismatch triggers a refetch of that query. Needed because the scope filters required two fields the first version did not pull.
 
+## Stale records
+
+- **Stale is computed at load time and stored on the trial row.** The snapshot date is known then, and every downstream table (forecasts, dim_trial, Excel) inherits the flag without recomputing it. The cutoff is snapshot date minus `stale_after_months` x `days_per_month` days.
+- **Twelve months is the default** because ClinicalTrials.gov asks sponsors to verify records at least once a year.
+- **A missing last update date leaves the flag blank** rather than marking the trial stale. In practice the registry always supplies the date.
+- **Stale trials are still forecast.** The flag is a caution on the status label, not an exclusion.
+- **The original sponsor name travels as `sponsor_name`.** In dim_trial it sits next to the sponsor group; in the Excel sheets it is inserted after the sponsor column by joining on NCT ID, so the forecast and benchmark tables in SQLite stay narrow.
+- **Schema changes rebuild the database.** The SQLite file is gitignored and fully derived from the cached raw JSON, so when the schema changes the file is deleted and `load` recreates it.
+
 ## Storage
 
 - **Snapshot date defaults to today** for every command. `--date` overrides it so an older raw folder can be reloaded.

@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS trials (
     last_update_date TEXT,
     valve_type TEXT NOT NULL,
     site_count INTEGER NOT NULL,
+    is_stale INTEGER,
     PRIMARY KEY (snapshot_date, nct_id)
 );
 CREATE TABLE IF NOT EXISTS sites (
@@ -117,6 +118,8 @@ CREATE TABLE IF NOT EXISTS forecasts (
     posted_primary_completion_type TEXT,
     gap_days INTEGER,
     status_label TEXT NOT NULL,
+    last_update_posted TEXT,
+    is_stale INTEGER,
     PRIMARY KEY (snapshot_date, nct_id)
 );
 CREATE TABLE IF NOT EXISTS forecast_exclusions (
@@ -199,11 +202,11 @@ def replace_snapshot(
                 day, r.nct_id, r.title, r.lead_sponsor_raw, r.lead_sponsor_class, r.sponsor, r.overall_status, r.phase,
                 r.conditions, r.interventions, r.intervention_types, r.enrollment_count, r.enrollment_type,
                 _iso(r.start_date), _iso(r.primary_completion_date), r.primary_completion_type,
-                _iso(r.completion_date), _iso(r.last_update_date), r.valve_type, r.site_count,
+                _iso(r.completion_date), _iso(r.last_update_date), r.valve_type, r.site_count, r.is_stale,
             )
             for r in records
         ]
-        conn.executemany(f"INSERT INTO trials VALUES ({','.join('?' * 20)})", trial_rows)
+        conn.executemany(f"INSERT INTO trials VALUES ({','.join('?' * 21)})", trial_rows)
         conn.executemany("INSERT INTO scope_exclusions VALUES (?,?,?)", [(day, n, reason) for n, reason in scope_exclusions])
         conn.executemany(
             "INSERT INTO filter_log VALUES (?,?,?,?,?)",
@@ -251,7 +254,7 @@ def latest_snapshot(conn: sqlite3.Connection) -> date | None:
 
 DATE_COLUMNS = {
     "start_date", "primary_completion_date", "completion_date", "last_update_date",
-    "date_p25", "date_median", "date_p75", "posted_primary_completion_date",
+    "date_p25", "date_median", "date_p75", "posted_primary_completion_date", "last_update_posted",
 }
 
 
