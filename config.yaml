@@ -158,18 +158,16 @@ forecast:
     - name: large
       max_enrollment: null
   # Gap = median forecast date minus posted primary completion date, in days.
+  # A gap above on_track_max_days is Behind forecast.
   status_thresholds:
     on_track_max_days: 90
-    at_risk_max_days: 365
-  # Label priority: primary_completion_reached, past_posted_date, past_forecast, no_posted_date, then the gap thresholds.
+  # Label priority: finished_enrolling, overdue, behind_forecast (median date passed
+  # or gap over the threshold), otherwise on_track.
   labels:
-    primary_completion_reached: Primary completion reached
-    past_posted_date: Past posted date
-    past_forecast: Past forecast
+    finished_enrolling: Finished enrolling
+    overdue: Overdue
+    behind_forecast: Behind forecast
     on_track: On track
-    at_risk: At risk
-    likely_late: Likely late
-    no_posted_date: No posted date
 
 backtest:
   # Leave-one-out cross-validation over every benchmark trial.

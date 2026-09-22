@@ -38,19 +38,16 @@ Three models are fitted on the benchmark set and compared by leave-one-out cross
 
 For every model, each duration is added to the trial's start date, and the result is always a range, never a single date. Trials whose median forecast runs past 240 months from start are excluded and listed with a reason. In this snapshot, after the scope and benchmark filters, the horizon cap excluded 0 under the naive baseline model, 21 under the per-site rate model, 0 under the log-linear regression model.
 
-**Status label.** Active trials whose primary completion date is ACTUAL have finished enrolling: they get the label Primary completion reached, no forecast, and stay out of every late or at-risk count. For the rest, two checks come first. If the sponsor's posted primary completion date is already behind the snapshot date, the trial is Past posted date. Otherwise, if the model's median date is already behind the snapshot date, the trial is Past forecast. Only then is the gap used: gap = median forecast date minus the posted date. Up to 90 days is On track, up to 365 days is At risk, beyond that is Likely late. A negative gap means the forecast is ahead of the posted date. Trials with no posted date get their own label.
+**Status label.** Active trials whose primary completion date is ACTUAL have finished enrolling: they get the label Finished enrolling, no forecast, and stay out of the other counts. For the rest, two checks come first. If the sponsor's posted primary completion date is already behind the snapshot date, the trial is Overdue. Otherwise, if the model's median date is already behind the snapshot date, the trial is Behind forecast. Only then is the gap used: gap = median forecast date minus the posted date. Up to 90 days is On track, beyond that is Behind forecast. A negative gap means the forecast is ahead of the posted date. Trials with no posted date are On track because nothing shows a delay.
 
 ## Status labels in this snapshot
 
 | Label | Meaning | Trials |
 |---|---|---|
-| Primary completion reached | The trial is still listed as active but its primary completion date is marked ACTUAL, so enrollment has finished. No forecast is made and the trial is kept out of the late and at-risk counts. If it meets the benchmark rules it joins the benchmark set. | 31 |
-| Past posted date | The sponsor's posted primary completion date is already behind the snapshot date, yet the trial is still listed as active. Either the record is out of date or the trial has slipped past its own plan. | 36 |
-| Past forecast | The model's median estimate is already behind the snapshot date but the trial is still active. The estimate has passed, so the trial is running slower than comparable completed trials. | 22 |
-| On track | The median forecast lands no more than 90 days after the posted date, or earlier. | 18 |
-| At risk | The median forecast lands between 90 and 365 days after the posted date. | 5 |
-| Likely late | The median forecast lands more than 365 days after the posted date. | 5 |
-| No posted date | The registry has no primary completion date for the trial, so there is nothing to compare against. | 0 |
+| Finished enrolling | The trial is still listed as active but its primary completion date is marked ACTUAL, so enrollment has finished. No forecast is made and the trial is kept out of the other counts. If it meets the benchmark rules it joins the benchmark set. | 31 |
+| Overdue | The sponsor's posted primary completion date is already behind the snapshot date, yet the trial is still listed as active. Either the record is out of date or the trial has slipped past its own plan. | 36 |
+| Behind forecast | The model's median estimate has already passed while the trial is still active, or it lands more than 90 days after the posted date. Either way the trial is running slower than the posted plan or than comparable completed trials. | 32 |
+| On track | The median forecast lands no more than 90 days after the posted date, or earlier. Trials with no posted date are also here because there is no evidence of a delay. | 18 |
 
 ## Per-site rates in this snapshot
 

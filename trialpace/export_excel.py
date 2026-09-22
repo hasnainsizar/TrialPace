@@ -16,13 +16,10 @@ from trialpace.db import read_table
 
 HEADER_FONT = Font(bold=True)
 STATUS_FILLS = {
-    "primary_completion_reached": "D0CECE",
-    "past_posted_date": "F4B084",
-    "past_forecast": "BDD7EE",
     "on_track": "C6EFCE",
-    "at_risk": "FFEB9C",
-    "likely_late": "FFC7CE",
-    "no_posted_date": "D9D9D9",
+    "behind_forecast": "FFEB9C",
+    "overdue": "FFC7CE",
+    "finished_enrolling": "D9D9D9",
 }
 DATE_FORMAT = "yyyy-mm-dd"
 
@@ -125,7 +122,7 @@ def summary_frame(
             rows.append((f"Trials: {group}", int(count)))
     rows.append(("Active trials", len(forecasts)))
     if not forecasts.empty:
-        finished = str(labels.get("primary_completion_reached", ""))
+        finished = str(labels.get("finished_enrolling", ""))
         rows.append(("Active trials with a forecast", int((forecasts["status_label"] != finished).sum())))
         models = forecasts.loc[forecasts["model"] != "none", "model"]
         rows.append(("Forecast model", str(models.iloc[0]) if len(models) else "none"))

@@ -11,43 +11,35 @@ COUNTROWS ( fact_forecast )
 
 // Measure. Active trials that still have a forecast, i.e. enrollment not yet finished.
 Forecast Trials =
-CALCULATE ( COUNTROWS ( fact_forecast ), fact_forecast[status_label] <> "Primary completion reached" )
+CALCULATE ( COUNTROWS ( fact_forecast ), fact_forecast[status_label] <> "Finished enrolling" )
 
 // Measure
-Primary Completion Reached =
-CALCULATE ( COUNTROWS ( fact_forecast ), fact_forecast[status_label] = "Primary completion reached" )
+Trials Finished Enrolling =
+CALCULATE ( COUNTROWS ( fact_forecast ), fact_forecast[status_label] = "Finished enrolling" )
 
 // Measure
 Total Target Enrollment =
 SUM ( fact_forecast[target_enrollment] )
 
 // Measure
-Trials Likely Late =
-CALCULATE ( COUNTROWS ( fact_forecast ), fact_forecast[status_label] = "Likely late" )
-
-// Measure
-Trials At Risk =
-CALCULATE ( COUNTROWS ( fact_forecast ), fact_forecast[status_label] = "At risk" )
-
-// Measure
 Trials On Track =
 CALCULATE ( COUNTROWS ( fact_forecast ), fact_forecast[status_label] = "On track" )
 
-// Measure
-Trials Past Forecast =
-CALCULATE ( COUNTROWS ( fact_forecast ), fact_forecast[status_label] = "Past forecast" )
+// Measure. Median forecast already passed, or more than the configured days after the posted date.
+Trials Behind Forecast =
+CALCULATE ( COUNTROWS ( fact_forecast ), fact_forecast[status_label] = "Behind forecast" )
 
 // Measure. Posted primary completion date already behind the snapshot date.
-Trials Past Posted Date =
-CALCULATE ( COUNTROWS ( fact_forecast ), fact_forecast[status_label] = "Past posted date" )
+Trials Overdue =
+CALCULATE ( COUNTROWS ( fact_forecast ), fact_forecast[status_label] = "Overdue" )
 
 // Measure
-Share Past Posted Date =
-DIVIDE ( [Trials Past Posted Date], [Forecast Trials] )
+Share Overdue =
+DIVIDE ( [Trials Overdue], [Forecast Trials] )
 
 // Measure
-Share Likely Late =
-DIVIDE ( [Trials Likely Late], [Forecast Trials] )
+Share Behind Forecast =
+DIVIDE ( [Trials Behind Forecast], [Forecast Trials] )
 
 // Measure. Positive means the median forecast lands after the posted date.
 Median Gap Days =

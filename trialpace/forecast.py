@@ -158,27 +158,23 @@ def add_months(start: date, months: float, days_per_month: float) -> date:
 
 
 def classify_status(posted: date | None, forecast_median: date, snapshot: date, forecast_cfg: dict[str, Any]) -> str:
-    """Status for an active trial. Dates already behind the snapshot take priority over the gap thresholds."""
+    """Status for an active trial. A posted date already behind the snapshot is Overdue;
+    a median forecast already behind the snapshot is Behind forecast; otherwise the gap decides."""
     labels = forecast_cfg["labels"]
     if posted is not None and posted < snapshot:
-        return str(labels["past_posted_date"])
+        return str(labels["overdue"])
     if forecast_median < snapshot:
-        return str(labels["past_forecast"])
+        return str(labels["behind_forecast"])
     gap = (forecast_median - posted).days if posted else None
     return label_status(gap, forecast_cfg)
 
 
 def label_status(gap_days: int | None, forecast_cfg: dict[str, Any]) -> str:
-    """Gap-threshold label only. Use classify_status for the full rule."""
+    """Gap-threshold label only. A missing gap (no posted date) cannot show a delay, so it is On track."""
     labels = forecast_cfg["labels"]
-    if gap_days is None:
-        return str(labels["no_posted_date"])
-    thresholds = forecast_cfg["status_thresholds"]
-    if gap_days <= int(thresholds["on_track_max_days"]):
+    if gap_days is None or gap_days <= int(forecast_cfg["status_thresholds"]["on_track_max_days"]):
         return str(labels["on_track"])
-    if gap_days <= int(thresholds["at_risk_max_days"]):
-        return str(labels["at_risk"])
-    return str(labels["likely_late"])
+    return str(labels["behind_forecast"])
 
 
 FORECAST_COLUMNS = [
@@ -209,7 +205,7 @@ def build_forecasts(
     labels = forecast_cfg["labels"]
     for row in active.itertuples(index=False):
         if row.primary_completion_type == "ACTUAL":
-            rows.append(_completed_row(row, str(labels["primary_completion_reached"])))
+            rows.append(_completed_row(row, str(labels["finished_enrolling"])))
             continue
         if pd.isna(row.enrollment_count) or int(row.enrollment_count) <= 0:
             exclusions.append({"nct_id": row.nct_id, "reason": "target enrollment missing or zero"})
