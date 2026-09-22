@@ -6,9 +6,9 @@ trialpace pulls interventional trials since 2010 for transcatheter aortic, mitra
 
 This project uses only the public ClinicalTrials.gov API. It is not affiliated with, endorsed by, or informed by Edwards Lifesciences, Medtronic, Boston Scientific, Abbott, or any other company named in the data.
 
-## Why enrollment pace matters
+## Why trial timelines matter
 
-A device trial cannot report results until it has enrolled enough patients. For a company like Edwards or Medtronic, the enrollment period decides when a new valve can be submitted for approval, when it reaches the market, and how long a competitor's head start lasts. Sponsors post a planned primary completion date on ClinicalTrials.gov, but those dates are often optimistic. Comparing the posted date to what similar trials actually achieved gives an outside view of which trials are on schedule and which are likely to slip.
+A device trial cannot report results until it has enrolled enough patients and followed them to the primary endpoint. For a company like Edwards or Medtronic, the time to primary completion decides when a new valve can be submitted for approval, when it reaches the market, and how long a competitor's head start lasts. Sponsors post a planned primary completion date on ClinicalTrials.gov, but those dates are often optimistic. Comparing the posted date to what similar trials actually achieved gives an outside view of which trials are on schedule and which are likely to slip.
 
 ## What it produces
 

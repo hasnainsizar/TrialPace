@@ -19,7 +19,7 @@ from trialpace.predictors import MODEL_NAMES, make_predictor
 from trialpace.scope import apply_scope
 from trialpace.stale import is_stale, stale_cutoff
 
-app = typer.Typer(help="Enrollment pace forecasts for structural heart device trials.", no_args_is_help=True)
+app = typer.Typer(help="Structural heart trial primary completion forecasts.", no_args_is_help=True)
 
 ConfigOption = typer.Option(Path("config.yaml"), "--config", "-c", help="Path to config.yaml")
 DateOption = typer.Option(None, "--date", "-d", help="Snapshot date (YYYY-MM-DD). Defaults to today.")

@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "trialpace"
 version = "0.1.0"
-description = "Enrollment pace forecasts for structural heart device trials from ClinicalTrials.gov"
+description = "Structural heart trial primary completion forecasts"
 requires-python = ">=3.11"
 dependencies = [
     "requests>=2.31",
