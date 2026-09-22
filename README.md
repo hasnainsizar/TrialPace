@@ -93,6 +93,8 @@ Of 117 active trials, 31 have finished enrolling and are not forecast. The remai
 
 The benchmark set has 74 trials: 54 completed plus 20 active trials whose primary completion date is already actual. Under leave-one-out cross-validation the log-linear regression had the lowest median error at 41%, against 43% for the naive valve-type median and 59% for the per-site rate, so the regression is used for the outputs. The margin over the naive baseline is small. Completed aortic trials took a median of 21 months from start to primary completion, mitral trials 35 months, and tricuspid trials 27 months.
 
+The forecast only uses valve type, target enrollment, and site count. It does not know about follow-up length, staged enrollment, or trial design, so large pivotal trials often show as Behind forecast compared with the historical average.
+
 ## What this can't tell you
 
 - **When enrollment actually finished.** ClinicalTrials.gov reports primary completion, which includes follow-up after the last patient enrolled. Trials with long follow-up look slower than they enrolled.
